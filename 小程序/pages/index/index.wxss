@@ -1,0 +1,57 @@
+.container {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  min-height: 100vh;
+  background-color: #f5f5f5;
+}
+
+.header {
+  width: 100%;
+  padding: 60rpx 0;
+  background-color: #1890ff;
+  text-align: center;
+}
+
+.title {
+  font-size: 36rpx;
+  font-weight: bold;
+  color: #ffffff;
+}
+
+.content {
+  margin-top: 200rpx;
+  width: 100%;
+  display: flex;
+  justify-content: center;
+}
+
+.register-btn {
+  width: 400rpx;
+  height: 100rpx;
+  line-height: 100rpx;
+  font-size: 36rpx;
+  background-color: #1890ff;
+  color: #ffffff;
+  border-radius: 50rpx;
+  border: none;
+}
+
+.register-btn:active {
+  background-color: #096dd9;
+}
+
+.result {
+  margin-top: 60rpx;
+  padding: 30rpx;
+}
+
+.success {
+  color: #52c41a;
+  font-size: 32rpx;
+}
+
+.error {
+  color: #f5222d;
+  font-size: 32rpx;
+}
