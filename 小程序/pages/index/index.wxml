@@ -1,0 +1,21 @@
+<view class="container">
+  <view class="header">
+    <text class="title">欢迎使用新生报到系统</text>
+  </view>
+  
+  <view class="content">
+    <button 
+      class="register-btn" 
+      bindtap="handleRegister" 
+      loading="{{loading}}"
+    >
+      {{loading ? '报到中...' : '点击报到'}}
+    </button>
+  </view>
+  
+  <view class="result" wx:if="{{result}}">
+    <text class="{{result.success ? 'success' : 'error'}}">
+      {{result.message}}
+    </text>
+  </view>
+</view>
