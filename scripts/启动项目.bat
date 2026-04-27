@@ -16,5 +16,8 @@ echo 正在创建管理员账号...
 python manage.py createsuperuser
 echo.
 echo 启动服务器...
+echo 服务器地址: http://127.0.0.1:8000
+echo 管理后台: http://127.0.0.1:8000/admin
+echo.
+start http://127.0.0.1:8000
 python manage.py runserver 8000
-pause

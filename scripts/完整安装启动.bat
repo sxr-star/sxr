@@ -42,6 +42,7 @@ echo [6/6] 启动服务器...
 echo 服务器启动后，在浏览器访问: http://127.0.0.1:8000
 echo 接口地址: http://127.0.0.1:8000/api/register/
 echo.
+start http://127.0.0.1:8000
 python manage.py runserver 8000
 
 pause

@@ -25,6 +25,7 @@ echo 服务器地址: http://127.0.0.1:8000
 echo 管理后台: http://127.0.0.1:8000/admin
 echo 接口地址: http://127.0.0.1:8000/api/register/
 echo.
+start http://127.0.0.1:8000
 python manage.py runserver 8000
 
 pause
