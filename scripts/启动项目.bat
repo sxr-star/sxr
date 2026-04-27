@@ -1,23 +1,24 @@
 @echo off
-title 新生报到系统 - 启动项目
+chcp 65001 >nul
+title Freshmen Registration System - Start Project
 setlocal enabledelayedexpansion
 
 set "PROJECT_DIR=%~dp0.."
 
 cd /d "%PROJECT_DIR%"
 
-echo 正在安装 Django...
+echo Installing Django...
 python -m pip install django django-cors-headers
 echo.
-echo 安装完成！现在创建数据库...
+echo Database setup...
 python manage.py migrate
 echo.
-echo 正在创建管理员账号...
+echo Creating admin account...
 python manage.py createsuperuser
 echo.
-echo 启动服务器...
-echo 服务器地址: http://127.0.0.1:8000
-echo 管理后台: http://127.0.0.1:8000/admin
+echo Starting server...
+echo Server: http://127.0.0.1:8000
+echo Admin: http://127.0.0.1:8000/admin
 echo.
 start http://127.0.0.1:8000
 python manage.py runserver 8000
