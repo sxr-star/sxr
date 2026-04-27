@@ -1,0 +1,178 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>新生报到系统</title>
+  <style>
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+      background-color: #f5f5f5;
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+    }
+
+    .header {
+      width: 100%;
+      padding: 60px 0;
+      background: linear-gradient(135deg, #1890ff 0%, #096dd9 100%);
+      text-align: center;
+    }
+
+    .title {
+      font-size: 28px;
+      font-weight: bold;
+      color: #ffffff;
+    }
+
+    .content {
+      margin-top: 80px;
+      width: 100%;
+      max-width: 400px;
+      padding: 0 20px;
+      text-align: center;
+    }
+
+    .register-btn {
+      width: 100%;
+      height: 50px;
+      line-height: 50px;
+      font-size: 18px;
+      background-color: #1890ff;
+      color: #ffffff;
+      border: none;
+      border-radius: 25px;
+      cursor: pointer;
+      transition: all 0.3s;
+    }
+
+    .register-btn:hover {
+      background-color: #096dd9;
+    }
+
+    .register-btn:active {
+      transform: scale(0.98);
+    }
+
+    .register-btn:disabled {
+      background-color: #1890ff;
+      opacity: 0.6;
+      cursor: not-allowed;
+    }
+
+    .result {
+      margin-top: 30px;
+      padding: 15px;
+      border-radius: 8px;
+      display: none;
+    }
+
+    .result.show {
+      display: block;
+    }
+
+    .result.success {
+      background-color: #f6ffed;
+      border: 1px solid #b7eb8f;
+      color: #52c41a;
+    }
+
+    .result.error {
+      background-color: #fff2f0;
+      border: 1px solid #ffccc7;
+      color: #f5222d;
+    }
+
+    .info {
+      margin-top: 40px;
+      padding: 20px;
+      background: white;
+      border-radius: 8px;
+      box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+      max-width: 400px;
+      width: 100%;
+      margin-left: 20px;
+      margin-right: 20px;
+    }
+
+    .info h3 {
+      margin-bottom: 10px;
+      color: #333;
+    }
+
+    .info p {
+      color: #666;
+      font-size: 14px;
+      line-height: 1.6;
+    }
+  </style>
+</head>
+<body>
+  <div class="header">
+    <h1 class="title">欢迎使用新生报到系统</h1>
+  </div>
+
+  <div class="content">
+    <button class="register-btn" id="registerBtn" onclick="handleRegister()">
+      点击报到
+    </button>
+    
+    <div class="result" id="result"></div>
+  </div>
+
+  <div class="info">
+    <h3>使用说明</h3>
+    <p>1. 点击上方"点击报到"按钮</p>
+    <p>2. 系统将自动完成报到登记</p>
+    <p>3. 报到成功后可在管理后台查看记录</p>
+  </div>
+
+  <script>
+    let isLoading = false;
+
+    async function handleRegister() {
+      if (isLoading) {
+        return;
+      }
+
+      const btn = document.getElementById('registerBtn');
+      const result = document.getElementById('result');
+
+      isLoading = true;
+      btn.disabled = true;
+      btn.textContent = '报到中...';
+      result.className = 'result';
+      result.textContent = '';
+
+      try {
+        const response = await fetch('http://127.0.0.1:8000/api/register/', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          }
+        });
+
+        const data = await response.json();
+        
+        result.className = 'result show ' + (data.success ? 'success' : 'error');
+        result.textContent = data.message || (data.success ? '报到成功！' : '报到失败');
+      } catch (error) {
+        result.className = 'result show error';
+        result.textContent = '网络请求失败，请确保服务器正在运行';
+      } finally {
+        isLoading = false;
+        btn.disabled = false;
+        btn.textContent = '点击报到';
+      }
+    }
+  </script>
+</body>
+</html>
