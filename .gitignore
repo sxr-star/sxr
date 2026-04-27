@@ -41,3 +41,7 @@ db.sqlite3-journal
 
 # Qoder (Trae AI)
 .qoder/
+
+# Server output files
+server.log
+server_output.txt

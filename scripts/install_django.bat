@@ -1,11 +1,10 @@
 @echo off
-chcp 65001 >nul
-title Install Django
-echo Checking Python version...
+title 安装 Django
+echo 检查 Python 版本...
 python --version
 echo.
-echo Installing Django...
+echo 正在安装 Django...
 python -m pip install django
 echo.
-echo Done!
+echo 安装完成！
 pause
