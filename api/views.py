@@ -1,5 +1,6 @@
 import json
-from django.http import JsonResponse
+import os
+from django.http import JsonResponse, HttpResponse
 from django.views.decorators.csrf import csrf_exempt
 from django.views.decorators.http import require_POST
 from django.db import IntegrityError
@@ -86,3 +87,19 @@ def register_with_info(request):
             'success': False,
             'message': '学号已存在，请勿重复报到'
         })
+
+
+def index(request):
+    """
+    网页版首页视图
+    返回网页版 index.html 文件内容
+    """
+    base_dir = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+    html_path = os.path.join(base_dir, '网页版', 'index.html')
+    
+    try:
+        with open(html_path, 'r', encoding='utf-8') as f:
+            content = f.read()
+        return HttpResponse(content, content_type='text/html')
+    except FileNotFoundError:
+        return HttpResponse('网页版文件未找到', status=404, content_type='text/plain; charset=utf-8')
