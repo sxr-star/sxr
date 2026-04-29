@@ -34,11 +34,60 @@
     }
 
     .content {
-      margin-top: 80px;
+      margin-top: 40px;
       width: 100%;
       max-width: 400px;
       padding: 0 20px;
-      text-align: center;
+    }
+
+    .form-container {
+      background: white;
+      padding: 30px;
+      border-radius: 12px;
+      box-shadow: 0 2px 12px rgba(0,0,0,0.1);
+    }
+
+    .form-group {
+      margin-bottom: 20px;
+    }
+
+    .form-group label {
+      display: block;
+      margin-bottom: 8px;
+      color: #333;
+      font-size: 14px;
+      font-weight: 500;
+    }
+
+    .form-group input {
+      width: 100%;
+      height: 44px;
+      padding: 0 12px;
+      border: 1px solid #d9d9d9;
+      border-radius: 8px;
+      font-size: 16px;
+      transition: all 0.3s;
+    }
+
+    .form-group input:focus {
+      outline: none;
+      border-color: #1890ff;
+      box-shadow: 0 0 0 2px rgba(24,144,255,0.2);
+    }
+
+    .form-group input.error {
+      border-color: #f5222d;
+    }
+
+    .error-message {
+      color: #f5222d;
+      font-size: 12px;
+      margin-top: 4px;
+      display: none;
+    }
+
+    .error-message.show {
+      display: block;
     }
 
     .register-btn {
@@ -52,6 +101,7 @@
       border-radius: 25px;
       cursor: pointer;
       transition: all 0.3s;
+      margin-top: 10px;
     }
 
     .register-btn:hover {
@@ -63,13 +113,12 @@
     }
 
     .register-btn:disabled {
-      background-color: #1890ff;
-      opacity: 0.6;
+      background-color: #d9d9d9;
       cursor: not-allowed;
     }
 
     .result {
-      margin-top: 30px;
+      margin-top: 20px;
       padding: 15px;
       border-radius: 8px;
       display: none;
@@ -91,27 +140,22 @@
       color: #f5222d;
     }
 
-    .info {
-      margin-top: 40px;
-      padding: 20px;
-      background: white;
+    .result-info {
+      margin-top: 10px;
+      padding: 15px;
+      background: #f0f5ff;
       border-radius: 8px;
-      box-shadow: 0 2px 8px rgba(0,0,0,0.1);
-      max-width: 400px;
-      width: 100%;
-      margin-left: 20px;
-      margin-right: 20px;
+      border: 1px solid #adc6ff;
     }
 
-    .info h3 {
-      margin-bottom: 10px;
+    .result-info p {
+      margin: 5px 0;
       color: #333;
+      font-size: 14px;
     }
 
-    .info p {
-      color: #666;
-      font-size: 14px;
-      line-height: 1.6;
+    .result-info strong {
+      color: #1890ff;
     }
   </style>
 </head>
@@ -121,56 +165,136 @@
   </div>
 
   <div class="content">
-    <button class="register-btn" id="registerBtn" onclick="handleRegister()">
-      点击报到
-    </button>
-    
-    <div class="result" id="result"></div>
-  </div>
+    <div class="form-container">
+      <div class="form-group">
+        <label for="nameInput">姓名</label>
+        <input type="text" id="nameInput" placeholder="请输入姓名">
+        <div class="error-message" id="nameError">姓名不能为空</div>
+      </div>
 
-  <div class="info">
-    <h3>使用说明</h3>
-    <p>1. 点击上方"点击报到"按钮</p>
-    <p>2. 系统将自动完成报到登记</p>
-    <p>3. 报到成功后可在管理后台查看记录</p>
+      <div class="form-group">
+        <label for="studentIdInput">学号</label>
+        <input type="text" id="studentIdInput" placeholder="请输入学号">
+        <div class="error-message" id="studentIdError">学号不能为空</div>
+      </div>
+
+      <div class="form-group">
+        <label for="phoneInput">手机号</label>
+        <input type="tel" id="phoneInput" placeholder="请输入手机号" maxlength="11">
+        <div class="error-message" id="phoneError">请输入正确的手机号</div>
+      </div>
+
+      <button class="register-btn" id="registerBtn" onclick="handleRegister()">
+        提交报到
+      </button>
+
+      <div class="result" id="result"></div>
+      <div class="result-info" id="resultInfo" style="display: none;"></div>
+    </div>
   </div>
 
   <script>
     let isLoading = false;
+
+    function clearErrors() {
+      document.querySelectorAll('.error-message').forEach(el => el.classList.remove('show'));
+      document.querySelectorAll('input').forEach(el => el.classList.remove('error'));
+    }
+
+    function showError(inputId, errorId, message) {
+      const input = document.getElementById(inputId);
+      const error = document.getElementById(errorId);
+      input.classList.add('error');
+      error.textContent = message;
+      error.classList.add('show');
+    }
 
     async function handleRegister() {
       if (isLoading) {
         return;
       }
 
+      clearErrors();
+
+      const name = document.getElementById('nameInput').value.trim();
+      const studentId = document.getElementById('studentIdInput').value.trim();
+      const phone = document.getElementById('phoneInput').value.trim();
+
+      let hasError = false;
+
+      if (!name) {
+        showError('nameInput', 'nameError', '姓名不能为空');
+        hasError = true;
+      }
+
+      if (!studentId) {
+        showError('studentIdInput', 'studentIdError', '学号不能为空');
+        hasError = true;
+      }
+
+      if (!phone) {
+        showError('phoneInput', 'phoneError', '手机号不能为空');
+        hasError = true;
+      } else if (phone.length !== 11 || !/^\d+$/.test(phone)) {
+        showError('phoneInput', 'phoneError', '手机号格式不正确');
+        hasError = true;
+      }
+
+      if (hasError) {
+        return;
+      }
+
       const btn = document.getElementById('registerBtn');
       const result = document.getElementById('result');
+      const resultInfo = document.getElementById('resultInfo');
 
       isLoading = true;
       btn.disabled = true;
-      btn.textContent = '报到中...';
+      btn.textContent = '提交中...';
       result.className = 'result';
       result.textContent = '';
+      resultInfo.style.display = 'none';
 
       try {
-        const response = await fetch('http://127.0.0.1:8000/api/register/', {
+        const response = await fetch('http://127.0.0.1:8000/api/register_with_info/', {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',
-          }
+          },
+          body: JSON.stringify({
+            name: name,
+            student_id: studentId,
+            phone: phone
+          })
         });
 
         const data = await response.json();
         
-        result.className = 'result show ' + (data.success ? 'success' : 'error');
-        result.textContent = data.message || (data.success ? '报到成功！' : '报到失败');
+        if (data.success) {
+          result.className = 'result show success';
+          result.textContent = data.message;
+          resultInfo.innerHTML = `
+            <p><strong>姓名：</strong>${data.data.name}</p>
+            <p><strong>学号：</strong>${data.data.student_id}</p>
+            <p><strong>手机号：</strong>${data.data.phone}</p>
+            <p><strong>报到时间：</strong>${data.data.register_time}</p>
+          `;
+          resultInfo.style.display = 'block';
+
+          document.getElementById('nameInput').value = '';
+          document.getElementById('studentIdInput').value = '';
+          document.getElementById('phoneInput').value = '';
+        } else {
+          result.className = 'result show error';
+          result.textContent = data.message;
+        }
       } catch (error) {
         result.className = 'result show error';
         result.textContent = '网络请求失败，请确保服务器正在运行';
       } finally {
         isLoading = false;
         btn.disabled = false;
-        btn.textContent = '点击报到';
+        btn.textContent = '提交报到';
       }
     }
   </script>

@@ -2,7 +2,9 @@
 __pycache__/
 *.py[cod]
 *$py.class
-*.so
+*.pyc
+*.pyo
+*.pyd
 .Python
 build/
 develop-eggs/
@@ -19,9 +21,6 @@ wheels/
 *.egg-info/
 .installed.cfg
 *.egg
-venv/
-ENV/
-env/
 
 # Django
 *.log
@@ -30,6 +29,13 @@ db.sqlite3
 db.sqlite3-journal
 /media
 /staticfiles
+/static
+
+# Virtual Environment
+venv/
+env/
+ENV/
+.venv
 
 # IDE
 .vscode/
@@ -37,14 +43,24 @@ db.sqlite3-journal
 *.swp
 *.swo
 *~
+
+# OS
 .DS_Store
+Thumbs.db
 
-# Qoder (Trae AI)
-.qoder/
-
-# Server output files
-server.log
-server_output.txt
-
-# Environment variables (sensitive config)
+# Environment variables
 .env
+.env.local
+.env.*.local
+
+# Test files
+test_output*.html
+
+# Backup files
+*.backup
+*.backup_*
+db.sqlite3.backup*
+
+# WeChat Mini Program
+project.private.config.json
+*.private.config.json

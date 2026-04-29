@@ -4,18 +4,65 @@
   </view>
   
   <view class="content">
-    <button 
-      class="register-btn" 
-      bindtap="handleRegister" 
-      loading="{{loading}}"
-    >
-      {{loading ? '报到中...' : '点击报到'}}
-    </button>
+    <view class="form-container">
+      <view class="form-group">
+        <text class="label">姓名</text>
+        <input 
+          class="input {{nameError ? 'error' : ''}}" 
+          type="text" 
+          placeholder="请输入姓名" 
+          value="{{name}}"
+          bindinput="onNameInput"
+        />
+        <text class="error-text" wx:if="{{nameError}}">{{nameError}}</text>
+      </view>
+
+      <view class="form-group">
+        <text class="label">学号</text>
+        <input 
+          class="input {{studentIdError ? 'error' : ''}}" 
+          type="text" 
+          placeholder="请输入学号" 
+          value="{{studentId}}"
+          bindinput="onStudentIdInput"
+        />
+        <text class="error-text" wx:if="{{studentIdError}}">{{studentIdError}}</text>
+      </view>
+
+      <view class="form-group">
+        <text class="label">手机号</text>
+        <input 
+          class="input {{phoneError ? 'error' : ''}}" 
+          type="number" 
+          placeholder="请输入手机号" 
+          maxlength="11"
+          value="{{phone}}"
+          bindinput="onPhoneInput"
+        />
+        <text class="error-text" wx:if="{{phoneError}}">{{phoneError}}</text>
+      </view>
+
+      <button 
+        class="register-btn" 
+        bindtap="handleRegister" 
+        loading="{{loading}}"
+        disabled="{{loading}}"
+      >
+        {{loading ? '提交中...' : '提交报到'}}
+      </button>
+    </view>
   </view>
   
   <view class="result" wx:if="{{result}}">
     <text class="{{result.success ? 'success' : 'error'}}">
       {{result.message}}
     </text>
+  </view>
+
+  <view class="result-info" wx:if="{{result && result.success && result.data}}">
+    <text class="info-item"><text class="info-label">姓名：</text>{{result.data.name}}</text>
+    <text class="info-item"><text class="info-label">学号：</text>{{result.data.student_id}}</text>
+    <text class="info-item"><text class="info-label">手机号：</text>{{result.data.phone}}</text>
+    <text class="info-item"><text class="info-label">报到时间：</text>{{result.data.register_time}}</text>
   </view>
 </view>
