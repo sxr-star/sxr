@@ -3,6 +3,10 @@ chcp 65001 >nul
 title 新生报到系统 - 快速启动
 setlocal enabledelayedexpansion
 
+:: 配置 Python 路径
+set "PYTHON_PATH=D:\青软\Python\python安装路径"
+set "PATH=%PYTHON_PATH%;%PYTHON_PATH%\Scripts;%PATH%"
+
 set "PROJECT_DIR=%~dp0.."
 
 echo ========================================

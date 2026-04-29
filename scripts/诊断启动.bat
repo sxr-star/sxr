@@ -1,39 +1,48 @@
 @echo off
 chcp 65001 >nul
-title 新生报到系统 - 安装诊断
-setlocal enabledelayedexpansion
-
-set "PROJECT_DIR=%~dp0.."
+title 诊断启动问题
 
 echo ========================================
-echo    新生报到系统 - 安装诊断
+echo    诊断启动问题
 echo ========================================
 echo.
 
-echo [步骤1] 检查 Python...
+echo [1/5] 检查 Python 版本...
 python --version
+if errorlevel 1 (
+    echo 错误：Python 未安装或未添加到 PATH
+    pause
+    exit /b 1
+)
 echo.
 
-echo [步骤2] 安装 pip（使用 ensurepip）...
-python -m ensurepip --upgrade
+echo [2/5] 检查 Django 安装...
+python -c "import django; print('Django 版本:', django.get_version())"
+if errorlevel 1 (
+    echo 错误：Django 未安装
+    echo 正在安装 Django...
+    python -m pip install django django-cors-headers
+)
 echo.
 
-echo [步骤3] 安装 Django...
-python -m pip install django
+echo [3/5] 检查端口 8000 占用...
+netstat -ano | findstr :8000
+if errorlevel 1 (
+    echo 端口 8000 未被占用
+)
 echo.
 
-echo [步骤4] 进入项目目录并执行数据库迁移...
-cd /d "%PROJECT_DIR%"
-python manage.py migrate
+echo [4/5] 检查项目目录...
+cd /d "%~dp0.."
+echo 当前目录: %CD%
 echo.
 
-echo [步骤5] 创建管理员账号...
-python manage.py createsuperuser_auto
+echo [5/5] 测试 Django 配置...
+python manage.py check
+if errorlevel 1 (
+    echo 错误：Django 配置有问题
+)
 echo.
 
-echo ========================================
-echo    启动服务器...
-echo ========================================
-echo 服务器地址: http://127.0.0.1:8000
-echo.
-python manage.py runserver 8000
+echo 诊断完成！
+pause
