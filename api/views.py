@@ -5,6 +5,8 @@ import re
 from datetime import timedelta
 from PIL import Image
 import hashlib
+import cv2
+import numpy as np
 from django.http import JsonResponse, HttpResponse
 from django.views.decorators.csrf import csrf_exempt
 from django.views.decorators.http import require_POST
@@ -69,6 +71,78 @@ def images_are_identical(file1, file2):
         return False
     
     return md5_1 == md5_2
+
+
+def identify_id_card_side(image_file):
+    """
+    识别身份证是正面（人像面）还是反面（国徽面）
+    返回: 'front' 表示正面，'back' 表示反面，'unknown' 表示无法识别
+    
+    识别策略：
+    1. 正面特征：蓝色底纹、人脸区域
+    2. 反面特征：国徽图案、浅色调、"居民身份证"文字
+    """
+    try:
+        # 读取图片
+        image_file.seek(0)
+        img_array = np.frombuffer(image_file.read(), np.uint8)
+        img = cv2.imdecode(img_array, cv2.IMREAD_COLOR)
+        
+        if img is None:
+            return 'unknown'
+        
+        # 转换为HSV颜色空间
+        hsv = cv2.cvtColor(img, cv2.COLOR_BGR2HSV)
+        
+        # 检测蓝色区域（正面特征）
+        # 身份证正面的蓝色底纹在HSV中的范围
+        lower_blue = np.array([100, 50, 50])
+        upper_blue = np.array([130, 255, 255])
+        blue_mask = cv2.inRange(hsv, lower_blue, upper_blue)
+        blue_ratio = np.sum(blue_mask > 0) / (img.shape[0] * img.shape[1])
+        
+        # 检测人脸区域（正面特征）
+        # 使用肤色检测
+        lower_skin = np.array([0, 20, 70], dtype=np.uint8)
+        upper_skin = np.array([20, 255, 255], dtype=np.uint8)
+        skin_mask = cv2.inRange(hsv, lower_skin, upper_skin)
+        
+        # 应用形态学操作去除噪声
+        kernel = cv2.getStructuringElement(cv2.MORPH_ELLIPSE, (5, 5))
+        skin_mask = cv2.morphologyEx(skin_mask, cv2.MORPH_CLOSE, kernel)
+        skin_mask = cv2.morphologyEx(skin_mask, cv2.MORPH_OPEN, kernel)
+        
+        # 查找人脸区域（较大的连通区域）
+        contours, _ = cv2.findContours(skin_mask, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
+        has_face = False
+        for contour in contours:
+            area = cv2.contourArea(contour)
+            # 人脸区域应该占图像的5%-30%
+            if area > (img.shape[0] * img.shape[1] * 0.05) and area < (img.shape[0] * img.shape[1] * 0.30):
+                has_face = True
+                break
+        
+        # 检测红色区域（国徽特征，反面）
+        lower_red = np.array([0, 100, 100])
+        upper_red = np.array([10, 255, 255])
+        red_mask = cv2.inRange(hsv, lower_red, upper_red)
+        red_ratio = np.sum(red_mask > 0) / (img.shape[0] * img.shape[1])
+        
+        # 综合判断
+        # 正面：蓝色区域多 + 有人脸
+        # 反面：红色区域（国徽）+ 蓝色区域少 + 无人脸
+        if blue_ratio > 0.15 and has_face:
+            return 'front'
+        elif blue_ratio < 0.10 or (red_ratio > 0.02 and not has_face):
+            return 'back'
+        elif blue_ratio > 0.10:
+            return 'front'
+        else:
+            return 'back'
+            
+    except Exception as e:
+        print(f"身份证正反面识别失败: {e}")
+        return 'unknown'
 
 
 @csrf_exempt
@@ -426,9 +500,31 @@ def register_with_info_v3(request):
             'message': '身份证正面和反面照片高度相似，请确保上传的是不同的两面'
         })
     
-    # 重置文件指针（因为前面读取过文件内容计算哈希）
+    # 自动识别身份证正反面
     id_card_photo_front.seek(0)
     id_card_photo_back.seek(0)
+    
+    front_side = identify_id_card_side(id_card_photo_front)
+    back_side = identify_id_card_side(id_card_photo_back)
+    
+    # 重置文件指针
+    id_card_photo_front.seek(0)
+    id_card_photo_back.seek(0)
+    
+    # 如果识别成功，检查用户上传的是否正确
+    if front_side == 'back' and back_side == 'front':
+        # 用户上传反了，交换两张图片
+        id_card_photo_front, id_card_photo_back = id_card_photo_back, id_card_photo_front
+    elif front_side == 'back' and back_side == 'back':
+        return JsonResponse({
+            'success': False,
+            'message': '未检测到身份证正面照片（带人像的一面），请检查后重新上传'
+        })
+    elif front_side == 'front' and back_side == 'front':
+        return JsonResponse({
+            'success': False,
+            'message': '未检测到身份证反面照片（带国徽的一面），请检查后重新上传'
+        })
     
     try:
         # 创建学生信息记录
