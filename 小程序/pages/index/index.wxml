@@ -108,24 +108,26 @@
         </view>
 
         <view class="form-group">
-          <text class="label">身份证正面照片</text>
-          <view class="photo-upload" bindtap="chooseImageFront">
+          <text class="label">身份证正面照片 <text class="label-hint">（带人像的一面）</text></text>
+          <view class="photo-upload photo-upload-front" bindtap="chooseImageFront">
             <image wx:if="{{tempImagePathFront}}" class="photo-preview" src="{{tempImagePathFront}}" mode="aspectFit"/>
             <view wx:else class="photo-placeholder">
               <text class="photo-icon">+</text>
               <text class="photo-text">点击上传身份证正面照片</text>
+              <text class="photo-hint">人像面：含姓名、身份证号、照片</text>
             </view>
           </view>
           <text class="error-text" wx:if="{{photoErrorFront}}">{{photoErrorFront}}</text>
         </view>
 
         <view class="form-group">
-          <text class="label">身份证反面照片</text>
-          <view class="photo-upload" bindtap="chooseImageBack">
+          <text class="label">身份证反面照片 <text class="label-hint">（带国徽的一面）</text></text>
+          <view class="photo-upload photo-upload-back" bindtap="chooseImageBack">
             <image wx:if="{{tempImagePathBack}}" class="photo-preview" src="{{tempImagePathBack}}" mode="aspectFit"/>
             <view wx:else class="photo-placeholder">
               <text class="photo-icon">+</text>
               <text class="photo-text">点击上传身份证反面照片</text>
+              <text class="photo-hint">国徽面：含地址、签发机关、有效期</text>
             </view>
           </view>
           <text class="error-text" wx:if="{{photoErrorBack}}">{{photoErrorBack}}</text>

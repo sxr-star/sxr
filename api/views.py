@@ -3,12 +3,48 @@ import os
 import random
 import re
 from datetime import timedelta
+from PIL import Image
+import hashlib
 from django.http import JsonResponse, HttpResponse
 from django.views.decorators.csrf import csrf_exempt
 from django.views.decorators.http import require_POST
 from django.db import IntegrityError
 from django.utils import timezone
+from django.core.files.uploadedfile import InMemoryUploadedFile
 from .models import OperationRecord, StudentInfo, RegistrationRecord, VerificationCode
+
+
+def get_image_hash(image_file):
+    """计算图片的感知哈希值，用于比较两张图片是否相似"""
+    try:
+        img = Image.open(image_file)
+        img = img.convert('L').resize((32, 32), Image.LANCZOS)
+        pixels = list(img.getdata())
+        avg = sum(pixels) / len(pixels)
+        bits = ''.join('1' if p > avg else '0' for p in pixels)
+        return int(bits, 2)
+    except Exception:
+        return None
+
+
+def hamming_distance(hash1, hash2):
+    """计算两个哈希值的汉明距离"""
+    if hash1 is None or hash2 is None:
+        return 64
+    xor = hash1 ^ hash2
+    return bin(xor).count('1')
+
+
+def images_are_similar(file1, file2, threshold=15):
+    """判断两张图片是否相似（汉明距离小于阈值则认为相似）"""
+    hash1 = get_image_hash(file1)
+    hash2 = get_image_hash(file2)
+    
+    if hash1 is None or hash2 is None:
+        return False
+    
+    distance = hamming_distance(hash1, hash2)
+    return distance < threshold
 
 
 @csrf_exempt
@@ -352,6 +388,17 @@ def register_with_info_v3(request):
             'success': False,
             'message': '身份证反面照片大小不能超过5MB'
         })
+    
+    # 校验正反面照片是否为同一张图片
+    if images_are_similar(id_card_photo_front, id_card_photo_back):
+        return JsonResponse({
+            'success': False,
+            'message': '身份证正面和反面照片不能为同一张图片，请重新上传'
+        })
+    
+    # 重置文件指针（因为前面读取过文件内容计算哈希）
+    id_card_photo_front.seek(0)
+    id_card_photo_back.seek(0)
     
     try:
         # 创建学生信息记录

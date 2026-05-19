@@ -44,6 +44,12 @@
   font-weight: 500;
 }
 
+.label-hint {
+  color: #1890ff;
+  font-size: 24rpx;
+  font-weight: normal;
+}
+
 .input {
   width: 100%;
   height: 88rpx;
@@ -206,6 +212,12 @@
   font-size: 28rpx;
   color: #1890ff;
   margin-top: 10rpx;
+}
+
+.photo-hint {
+  font-size: 22rpx;
+  color: #666;
+  margin-top: 8rpx;
 }
 
 .photo-preview {
