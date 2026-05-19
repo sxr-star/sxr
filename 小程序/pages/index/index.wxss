@@ -1,0 +1,227 @@
+.container {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  min-height: 100vh;
+  background-color: #f5f5f5;
+}
+
+.header {
+  width: 100%;
+  padding: 60rpx 0;
+  background: linear-gradient(135deg, #1890ff 0%, #096dd9 100%);
+  text-align: center;
+}
+
+.title {
+  font-size: 36rpx;
+  font-weight: bold;
+  color: #ffffff;
+}
+
+.content {
+  margin-top: 40rpx;
+  width: 100%;
+  padding: 0 30rpx;
+}
+
+.form-container {
+  background: white;
+  padding: 40rpx;
+  border-radius: 24rpx;
+  box-shadow: 0 4rpx 24rpx rgba(0,0,0,0.1);
+}
+
+.form-group {
+  margin-bottom: 30rpx;
+}
+
+.label {
+  display: block;
+  margin-bottom: 16rpx;
+  color: #333;
+  font-size: 28rpx;
+  font-weight: 500;
+}
+
+.label-hint {
+  color: #1890ff;
+  font-size: 24rpx;
+  font-weight: normal;
+}
+
+.input {
+  width: 100%;
+  height: 88rpx;
+  padding: 0 24rpx;
+  border: 2rpx solid #d9d9d9;
+  border-radius: 16rpx;
+  font-size: 32rpx;
+  box-sizing: border-box;
+}
+
+.input.error {
+  border-color: #f5222d;
+}
+
+.input[disabled] {
+  background-color: #f5f5f5;
+  color: #999;
+}
+
+.error-text {
+  color: #f5222d;
+  font-size: 24rpx;
+  margin-top: 8rpx;
+  display: block;
+}
+
+.register-btn {
+  width: 100%;
+  height: 100rpx;
+  line-height: 100rpx;
+  font-size: 36rpx;
+  background-color: #1890ff;
+  color: #ffffff;
+  border-radius: 50rpx;
+  border: none;
+  margin-top: 20rpx;
+}
+
+.register-btn:active {
+  background-color: #096dd9;
+}
+
+.register-btn[disabled] {
+  background-color: #d9d9d9;
+  color: #999;
+}
+
+.result {
+  margin-top: 40rpx;
+  padding: 30rpx;
+  width: 90%;
+  border-radius: 16rpx;
+}
+
+.success {
+  color: #52c41a;
+  font-size: 32rpx;
+}
+
+.error {
+  color: #f5222d;
+  font-size: 32rpx;
+}
+
+.result-info {
+  margin-top: 20rpx;
+  padding: 30rpx;
+  background: #f0f5ff;
+  border-radius: 16rpx;
+  border: 2rpx solid #adc6ff;
+  width: 90%;
+}
+
+.info-item {
+  display: block;
+  margin: 10rpx 0;
+  color: #333;
+  font-size: 28rpx;
+}
+
+.info-label {
+  color: #1890ff;
+  font-weight: 500;
+}
+
+/* 登录状态 */
+.login-status {
+  margin-bottom: 30rpx;
+  padding: 20rpx;
+  background: #f6ffed;
+  border: 2rpx solid #b7eb8f;
+  border-radius: 16rpx;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.logout-link {
+  color: #1890ff;
+  font-size: 28rpx;
+}
+
+/* 验证码输入组 */
+.code-input-group {
+  display: flex;
+  gap: 20rpx;
+}
+
+.code-input-group .input {
+  flex: 1;
+}
+
+.code-btn {
+  width: 200rpx;
+  height: 88rpx;
+  line-height: 88rpx;
+  background-color: #1890ff;
+  color: white;
+  border: none;
+  border-radius: 16rpx;
+  font-size: 24rpx;
+  padding: 0;
+}
+
+.code-btn:active {
+  background-color: #096dd9;
+}
+
+.code-btn[disabled] {
+  background-color: #d9d9d9;
+  color: #999;
+}
+
+/* 照片上传 */
+.photo-upload {
+  width: 100%;
+  height: 300rpx;
+  border: 2rpx dashed #adc6ff;
+  border-radius: 16rpx;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background-color: #f0f5ff;
+}
+
+.photo-placeholder {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+}
+
+.photo-icon {
+  font-size: 80rpx;
+  color: #1890ff;
+  line-height: 1;
+}
+
+.photo-text {
+  font-size: 28rpx;
+  color: #1890ff;
+  margin-top: 10rpx;
+}
+
+.photo-hint {
+  font-size: 22rpx;
+  color: #666;
+  margin-top: 8rpx;
+}
+
+.photo-preview {
+  width: 100%;
+  height: 100%;
+  border-radius: 16rpx;
+}

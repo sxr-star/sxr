@@ -1,0 +1,471 @@
+Page({
+  data: {
+    // 登录页面数据
+    isLoggedIn: false,
+    loginPhone: '',
+    code: '',
+    loginPhoneError: '',
+    codeError: '',
+    loginLoading: false,
+    loginResult: null,
+    countdown: 0,
+    sending: false,
+    
+    // 报到页面数据
+    loading: false,
+    result: null,
+    name: '',
+    studentId: '',
+    phone: '',
+    nameError: '',
+    studentIdError: '',
+    photoErrorFront: '',
+    photoErrorBack: '',
+    tempImagePathFront: '',
+    tempImagePathBack: '',
+    verifiedPhone: ''
+  },
+
+  onLoad() {
+    // 页面加载时检查登录状态
+    this.checkLoginStatus();
+  },
+
+  // 检查登录状态
+  checkLoginStatus() {
+    wx.request({
+      url: 'http://127.0.0.1:8000/api/check_login/',
+      method: 'GET',
+      success: (res) => {
+        if (res.data.is_logged_in) {
+          this.setData({
+            isLoggedIn: true,
+            phone: res.data.phone,
+            verifiedPhone: res.data.phone
+          });
+        }
+      }
+    });
+  },
+
+  // 登录页面输入处理
+  onLoginPhoneInput(e) {
+    this.setData({
+      loginPhone: e.detail.value,
+      loginPhoneError: ''
+    });
+  },
+
+  onCodeInput(e) {
+    this.setData({
+      code: e.detail.value,
+      codeError: ''
+    });
+  },
+
+  // 发送验证码
+  handleSendCode() {
+    if (this.data.countdown > 0 || this.data.sending) return;
+
+    const phone = this.data.loginPhone.trim();
+    
+    if (!phone || phone.length !== 11) {
+      this.setData({ loginPhoneError: '请输入正确的手机号' });
+      return;
+    }
+
+    this.setData({ sending: true });
+
+    wx.request({
+      url: 'http://127.0.0.1:8000/api/send_code/',
+      method: 'POST',
+      data: { phone: phone },
+      success: (res) => {
+        if (res.data.success) {
+          this.startCountdown();
+          wx.showToast({
+            title: '验证码已发送',
+            icon: 'success'
+          });
+        } else {
+          wx.showToast({
+            title: res.data.message,
+            icon: 'none'
+          });
+        }
+      },
+      fail: () => {
+        wx.showToast({
+          title: '网络请求失败',
+          icon: 'error'
+        });
+      },
+      complete: () => {
+        this.setData({ sending: false });
+      }
+    });
+  },
+
+  // 倒计时
+  startCountdown() {
+    let countdown = 60;
+    this.setData({ countdown });
+    
+    const timer = setInterval(() => {
+      countdown--;
+      if (countdown <= 0) {
+        clearInterval(timer);
+        this.setData({ countdown: 0 });
+      } else {
+        this.setData({ countdown });
+      }
+    }, 1000);
+  },
+
+  // 登录
+  handleLogin() {
+    if (this.data.loginLoading) return;
+
+    this.clearLoginErrors();
+
+    const phone = this.data.loginPhone.trim();
+    const code = this.data.code.trim();
+
+    let hasError = false;
+
+    if (!phone || phone.length !== 11) {
+      this.setData({ loginPhoneError: '请输入正确的手机号' });
+      hasError = true;
+    }
+
+    if (!code) {
+      this.setData({ codeError: '验证码不能为空' });
+      hasError = true;
+    }
+
+    if (hasError) return;
+
+    this.setData({ loginLoading: true, loginResult: null });
+
+    wx.request({
+      url: 'http://127.0.0.1:8000/api/verify_code/',
+      method: 'POST',
+      data: {
+        phone: phone,
+        code: code
+      },
+      success: (res) => {
+        if (res.data.success) {
+          this.setData({
+            isLoggedIn: true,
+            phone: phone,
+            verifiedPhone: phone,
+            loginResult: { success: true, message: '登录成功' }
+          });
+          wx.showToast({
+            title: '登录成功',
+            icon: 'success'
+          });
+        } else {
+          this.setData({
+            loginResult: { success: false, message: res.data.message }
+          });
+          wx.showToast({
+            title: res.data.message,
+            icon: 'none'
+          });
+        }
+      },
+      fail: () => {
+        this.setData({
+          loginResult: { success: false, message: '网络请求失败' }
+        });
+        wx.showToast({
+          title: '网络请求失败',
+          icon: 'error'
+        });
+      },
+      complete: () => {
+        this.setData({ loginLoading: false });
+      }
+    });
+  },
+
+  // 退出登录
+  handleLogout() {
+    wx.request({
+      url: 'http://127.0.0.1:8000/api/logout/',
+      method: 'GET',
+      success: () => {
+        this.setData({
+          isLoggedIn: false,
+          loginPhone: '',
+          code: '',
+          phone: '',
+          verifiedPhone: '',
+          name: '',
+          studentId: '',
+          tempImagePath: ''
+        });
+        wx.showToast({
+          title: '已退出登录',
+          icon: 'success'
+        });
+      }
+    });
+  },
+
+  // 报到页面输入处理
+  onNameInput(e) {
+    this.setData({
+      name: e.detail.value,
+      nameError: ''
+    });
+  },
+
+  onStudentIdInput(e) {
+    this.setData({
+      studentId: e.detail.value,
+      studentIdError: ''
+    });
+  },
+
+  // 计算文件的MD5哈希值
+  getFileMD5(filePath) {
+    return new Promise((resolve, reject) => {
+      wx.getFileSystemManager().readFile({
+        filePath: filePath,
+        success: (res) => {
+          const arrayBuffer = res.data;
+          const wordArray = CryptoJS.lib.WordArray.create(arrayBuffer);
+          const hash = CryptoJS.MD5(wordArray).toString();
+          resolve(hash);
+        },
+        fail: (err) => {
+          reject(err);
+        }
+      });
+    });
+  },
+
+  // 检查两张图片是否为同一张
+  async checkImagesNotSame() {
+    const { tempImagePathFront, tempImagePathBack } = this.data;
+    
+    if (tempImagePathFront && tempImagePathBack) {
+      try {
+        const md5Front = await this.getFileMD5(tempImagePathFront);
+        const md5Back = await this.getFileMD5(tempImagePathBack);
+        
+        if (md5Front === md5Back) {
+          this.setData({ 
+            photoErrorBack: '身份证正面和反面不能上传同一张图片',
+            photoErrorFront: '身份证正面和反面不能上传同一张图片'
+          });
+          return false;
+        }
+      } catch (err) {
+        console.error('MD5计算失败', err);
+      }
+    }
+    return true;
+  },
+
+  // 选择正面图片
+  chooseImageFront() {
+    wx.chooseImage({
+      count: 1,
+      sizeType: ['original', 'compressed'],
+      sourceType: ['album', 'camera'],
+      success: (res) => {
+        this.setData({
+          tempImagePathFront: res.tempFilePaths[0],
+          photoErrorFront: ''
+        });
+        // 检查是否为同一张图片
+        this.checkImagesNotSame();
+      }
+    });
+  },
+
+  // 选择反面图片
+  chooseImageBack() {
+    wx.chooseImage({
+      count: 1,
+      sizeType: ['original', 'compressed'],
+      sourceType: ['album', 'camera'],
+      success: (res) => {
+        this.setData({
+          tempImagePathBack: res.tempFilePaths[0],
+          photoErrorBack: ''
+        });
+        // 检查是否为同一张图片
+        this.checkImagesNotSame();
+      }
+    });
+  },
+
+  // 清除登录错误
+  clearLoginErrors() {
+    this.setData({
+      loginPhoneError: '',
+      codeError: ''
+    });
+  },
+
+  // 清除报到错误
+  clearErrors() {
+    this.setData({
+      nameError: '',
+      studentIdError: '',
+      photoErrorFront: '',
+      photoErrorBack: ''
+    });
+  },
+
+  // 验证表单
+  validateForm() {
+    const { name, studentId, tempImagePathFront, tempImagePathBack } = this.data;
+    let isValid = true;
+
+    this.clearErrors();
+
+    if (!name) {
+      this.setData({ nameError: '姓名不能为空' });
+      isValid = false;
+    }
+
+    if (!studentId) {
+      this.setData({ studentIdError: '学号不能为空' });
+      isValid = false;
+    }
+
+    if (!tempImagePathFront) {
+      this.setData({ photoErrorFront: '请上传身份证正面照片' });
+      isValid = false;
+    }
+
+    if (!tempImagePathBack) {
+      this.setData({ photoErrorBack: '请上传身份证反面照片' });
+      isValid = false;
+    }
+
+    return isValid;
+  },
+
+  // 提交报到
+  async handleRegister() {
+    if (this.data.loading) return;
+
+    if (!this.validateForm()) return;
+
+    // 前端检查是否为同一张图片
+    const imagesValid = await this.checkImagesNotSame();
+    if (!imagesValid) {
+      this.setData({ loading: false });
+      return;
+    }
+
+    this.setData({
+      loading: true,
+      result: null
+    });
+
+    const { name, studentId, tempImagePathFront, tempImagePathBack } = this.data;
+
+    // 小程序 uploadFile 一次只能上传一个文件，先上传正面
+    wx.uploadFile({
+      url: 'http://127.0.0.1:8000/api/register_with_info_v3/',
+      filePath: tempImagePathFront,
+      name: 'id_card_photo_front',
+      formData: {
+        name: name,
+        student_id: studentId
+      },
+      success: (res) => {
+        const data = JSON.parse(res.data);
+
+        if (data.success) {
+          // 正面上传成功，再上传反面
+          wx.uploadFile({
+            url: 'http://127.0.0.1:8000/api/register_with_info_v3/',
+            filePath: tempImagePathBack,
+            name: 'id_card_photo_back',
+            formData: {
+              name: name,
+              student_id: studentId
+            },
+            success: (res2) => {
+              const data2 = JSON.parse(res2.data);
+              this.setData({
+                result: data2
+              });
+
+              if (data2.success) {
+                this.setData({
+                  name: '',
+                  studentId: '',
+                  tempImagePathFront: '',
+                  tempImagePathBack: ''
+                });
+
+                wx.showToast({
+                  title: '报到成功',
+                  icon: 'success',
+                  duration: 2000
+                });
+              } else {
+                wx.showToast({
+                  title: data2.message,
+                  icon: 'none',
+                  duration: 2000
+                });
+              }
+            },
+            fail: () => {
+              this.setData({
+                result: {
+                  success: false,
+                  message: '反面照片上传失败'
+                }
+              });
+              wx.showToast({
+                title: '反面照片上传失败',
+                icon: 'error',
+                duration: 2000
+              });
+            }
+          });
+        } else {
+          this.setData({
+            result: data
+          });
+          wx.showToast({
+            title: data.message,
+            icon: 'none',
+            duration: 2000
+          });
+        }
+      },
+      fail: (err) => {
+        this.setData({
+          result: {
+            success: false,
+            message: '网络请求失败，请确保服务器正在运行'
+          }
+        });
+
+        wx.showToast({
+          title: '网络请求失败',
+          icon: 'error',
+          duration: 2000
+        });
+      },
+      complete: () => {
+        this.setData({
+          loading: false
+        });
+      }
+    });
+  }
+});
