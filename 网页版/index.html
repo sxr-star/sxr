@@ -4,6 +4,7 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>新生报到系统</title>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/crypto-js/4.1.1/crypto-js.min.js"></script>
   <style>
     * {
       margin: 0;
@@ -517,6 +518,33 @@
       }
     }
 
+    // 计算文件的MD5哈希值
+    async function getFileMD5(file) {
+      return new Promise((resolve) => {
+        const reader = new FileReader();
+        reader.onload = function(e) {
+          const wordArray = CryptoJS.lib.WordArray.create(e.target.result);
+          const hash = CryptoJS.MD5(wordArray).toString();
+          resolve(hash);
+        };
+        reader.readAsArrayBuffer(file);
+      });
+    }
+
+    // 检查两张图片是否为同一张
+    async function checkImagesNotSame() {
+      if (selectedFileFront && selectedFileBack) {
+        const md5Front = await getFileMD5(selectedFileFront);
+        const md5Back = await getFileMD5(selectedFileBack);
+        
+        if (md5Front === md5Back) {
+          showError('idCardPhotoBack', 'photoErrorBack', '身份证正面和反面不能上传同一张图片');
+          return false;
+        }
+      }
+      return true;
+    }
+
     function handleFileChange(event, type) {
       const file = event.target.files[0];
       if (file) {
@@ -544,6 +572,11 @@
             preview.classList.add('show');
           };
           reader.readAsDataURL(file);
+        }
+        
+        // 如果两面都已选择，检查是否为同一张
+        if (selectedFileFront && selectedFileBack) {
+          checkImagesNotSame();
         }
       }
     }
@@ -576,6 +609,14 @@
 
       if (!selectedFileBack) {
         showError('idCardPhotoBack', 'photoErrorBack', '请上传身份证反面照片');
+        hasError = true;
+      }
+
+      if (hasError) return;
+
+      // 前端检查是否为同一张图片
+      const imagesValid = await checkImagesNotSame();
+      if (!imagesValid) {
         hasError = true;
       }
 

@@ -230,6 +230,47 @@ Page({
     });
   },
 
+  // 计算文件的MD5哈希值
+  getFileMD5(filePath) {
+    return new Promise((resolve, reject) => {
+      wx.getFileSystemManager().readFile({
+        filePath: filePath,
+        success: (res) => {
+          const arrayBuffer = res.data;
+          const wordArray = CryptoJS.lib.WordArray.create(arrayBuffer);
+          const hash = CryptoJS.MD5(wordArray).toString();
+          resolve(hash);
+        },
+        fail: (err) => {
+          reject(err);
+        }
+      });
+    });
+  },
+
+  // 检查两张图片是否为同一张
+  async checkImagesNotSame() {
+    const { tempImagePathFront, tempImagePathBack } = this.data;
+    
+    if (tempImagePathFront && tempImagePathBack) {
+      try {
+        const md5Front = await this.getFileMD5(tempImagePathFront);
+        const md5Back = await this.getFileMD5(tempImagePathBack);
+        
+        if (md5Front === md5Back) {
+          this.setData({ 
+            photoErrorBack: '身份证正面和反面不能上传同一张图片',
+            photoErrorFront: '身份证正面和反面不能上传同一张图片'
+          });
+          return false;
+        }
+      } catch (err) {
+        console.error('MD5计算失败', err);
+      }
+    }
+    return true;
+  },
+
   // 选择正面图片
   chooseImageFront() {
     wx.chooseImage({
@@ -241,6 +282,8 @@ Page({
           tempImagePathFront: res.tempFilePaths[0],
           photoErrorFront: ''
         });
+        // 检查是否为同一张图片
+        this.checkImagesNotSame();
       }
     });
   },
@@ -256,6 +299,8 @@ Page({
           tempImagePathBack: res.tempFilePaths[0],
           photoErrorBack: ''
         });
+        // 检查是否为同一张图片
+        this.checkImagesNotSame();
       }
     });
   },
@@ -309,10 +354,17 @@ Page({
   },
 
   // 提交报到
-  handleRegister() {
+  async handleRegister() {
     if (this.data.loading) return;
 
     if (!this.validateForm()) return;
+
+    // 前端检查是否为同一张图片
+    const imagesValid = await this.checkImagesNotSame();
+    if (!imagesValid) {
+      this.setData({ loading: false });
+      return;
+    }
 
     this.setData({
       loading: true,

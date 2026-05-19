@@ -35,7 +35,7 @@ def hamming_distance(hash1, hash2):
     return bin(xor).count('1')
 
 
-def images_are_similar(file1, file2, threshold=15):
+def images_are_similar(file1, file2, threshold=10):
     """判断两张图片是否相似（汉明距离小于阈值则认为相似）"""
     hash1 = get_image_hash(file1)
     hash2 = get_image_hash(file2)
@@ -45,6 +45,30 @@ def images_are_similar(file1, file2, threshold=15):
     
     distance = hamming_distance(hash1, hash2)
     return distance < threshold
+
+
+def get_image_md5(image_file):
+    """计算图片的MD5哈希值，用于精确判断是否为同一张图片"""
+    try:
+        image_file.seek(0)
+        md5_hash = hashlib.md5()
+        for chunk in image_file.chunks():
+            md5_hash.update(chunk)
+        image_file.seek(0)
+        return md5_hash.hexdigest()
+    except Exception:
+        return None
+
+
+def images_are_identical(file1, file2):
+    """判断两张图片是否完全相同（通过MD5哈希值）"""
+    md5_1 = get_image_md5(file1)
+    md5_2 = get_image_md5(file2)
+    
+    if md5_1 is None or md5_2 is None:
+        return False
+    
+    return md5_1 == md5_2
 
 
 @csrf_exempt
@@ -389,11 +413,17 @@ def register_with_info_v3(request):
             'message': '身份证反面照片大小不能超过5MB'
         })
     
-    # 校验正反面照片是否为同一张图片
-    if images_are_similar(id_card_photo_front, id_card_photo_back):
+    # 校验正反面照片是否为同一张图片（先精确匹配，再相似度匹配）
+    if images_are_identical(id_card_photo_front, id_card_photo_back):
         return JsonResponse({
             'success': False,
             'message': '身份证正面和反面照片不能为同一张图片，请重新上传'
+        })
+    
+    if images_are_similar(id_card_photo_front, id_card_photo_back):
+        return JsonResponse({
+            'success': False,
+            'message': '身份证正面和反面照片高度相似，请确保上传的是不同的两面'
         })
     
     # 重置文件指针（因为前面读取过文件内容计算哈希）
