@@ -84,6 +84,10 @@ class StudentInfo(models.Model):
         blank=True,
         null=True
     )
+    is_name_verified = models.BooleanField(
+        default=False,
+        verbose_name='姓名审核状态'
+    )
     created_at = models.DateTimeField(
         auto_now_add=True,
         verbose_name='创建时间'

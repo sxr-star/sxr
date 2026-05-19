@@ -20,10 +20,11 @@ class OperationRecordAdmin(admin.ModelAdmin):
 
 @admin.register(StudentInfo)
 class StudentInfoAdmin(admin.ModelAdmin):
-    list_display = ['id', 'name', 'student_id', 'phone', 'has_id_card_photo_front', 'has_id_card_photo_back', 'created_at']
+    list_display = ['id', 'name', 'student_id', 'phone', 'has_id_card_photo_front', 'has_id_card_photo_back', 'is_name_verified', 'created_at']
     search_fields = ['student_id', 'name', 'phone']
-    list_filter = ['created_at']
+    list_filter = ['created_at', 'is_name_verified']
     ordering = ['-created_at']
+    actions = ['verify_name', 'reject_name']
 
     def has_id_card_photo_front(self, obj):
         return bool(obj.id_card_photo_front)
@@ -34,6 +35,14 @@ class StudentInfoAdmin(admin.ModelAdmin):
         return bool(obj.id_card_photo_back)
     has_id_card_photo_back.boolean = True
     has_id_card_photo_back.short_description = '已上传反面照片'
+
+    @admin.action(description='审核通过：姓名与身份证一致')
+    def verify_name(self, request, queryset):
+        queryset.update(is_name_verified=True)
+
+    @admin.action(description='审核不通过：姓名与身份证不一致')
+    def reject_name(self, request, queryset):
+        queryset.update(is_name_verified=False)
 
 
 @admin.register(RegistrationRecord)
