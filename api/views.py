@@ -79,8 +79,8 @@ def identify_id_card_side(image_file):
     返回: 'front' 表示正面，'back' 表示反面，'unknown' 表示无法识别
     
     识别策略：
-    1. 正面特征：蓝色底纹、人脸区域
-    2. 反面特征：国徽图案、浅色调、"居民身份证"文字
+    1. 正面特征：人脸区域、蓝色文字
+    2. 反面特征：国徽图案（红色）、"居民身份证"文字
     """
     try:
         # 读取图片
@@ -94,50 +94,55 @@ def identify_id_card_side(image_file):
         # 转换为HSV颜色空间
         hsv = cv2.cvtColor(img, cv2.COLOR_BGR2HSV)
         
-        # 检测蓝色区域（正面特征）
-        # 身份证正面的蓝色底纹在HSV中的范围
-        lower_blue = np.array([100, 50, 50])
+        # 检测蓝色区域（正面特征 - 蓝色文字）
+        lower_blue = np.array([100, 40, 50])
         upper_blue = np.array([130, 255, 255])
         blue_mask = cv2.inRange(hsv, lower_blue, upper_blue)
         blue_ratio = np.sum(blue_mask > 0) / (img.shape[0] * img.shape[1])
         
         # 检测人脸区域（正面特征）
         # 使用肤色检测
-        lower_skin = np.array([0, 20, 70], dtype=np.uint8)
-        upper_skin = np.array([20, 255, 255], dtype=np.uint8)
+        lower_skin = np.array([0, 15, 100], dtype=np.uint8)
+        upper_skin = np.array([25, 255, 255], dtype=np.uint8)
         skin_mask = cv2.inRange(hsv, lower_skin, upper_skin)
         
         # 应用形态学操作去除噪声
-        kernel = cv2.getStructuringElement(cv2.MORPH_ELLIPSE, (5, 5))
+        kernel = cv2.getStructuringElement(cv2.MORPH_ELLIPSE, (7, 7))
         skin_mask = cv2.morphologyEx(skin_mask, cv2.MORPH_CLOSE, kernel)
         skin_mask = cv2.morphologyEx(skin_mask, cv2.MORPH_OPEN, kernel)
         
         # 查找人脸区域（较大的连通区域）
         contours, _ = cv2.findContours(skin_mask, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
         has_face = False
+        max_face_area = 0
         for contour in contours:
             area = cv2.contourArea(contour)
-            # 人脸区域应该占图像的5%-30%
-            if area > (img.shape[0] * img.shape[1] * 0.05) and area < (img.shape[0] * img.shape[1] * 0.30):
+            # 人脸区域应该占图像的3%-25%
+            if area > (img.shape[0] * img.shape[1] * 0.03) and area < (img.shape[0] * img.shape[1] * 0.25):
                 has_face = True
-                break
+                max_face_area = max(max_face_area, area)
         
         # 检测红色区域（国徽特征，反面）
-        lower_red = np.array([0, 100, 100])
-        upper_red = np.array([10, 255, 255])
-        red_mask = cv2.inRange(hsv, lower_red, upper_red)
+        lower_red1 = np.array([0, 100, 100])
+        upper_red1 = np.array([10, 255, 255])
+        lower_red2 = np.array([160, 100, 100])
+        upper_red2 = np.array([180, 255, 255])
+        red_mask1 = cv2.inRange(hsv, lower_red1, upper_red1)
+        red_mask2 = cv2.inRange(hsv, lower_red2, upper_red2)
+        red_mask = cv2.bitwise_or(red_mask1, red_mask2)
         red_ratio = np.sum(red_mask > 0) / (img.shape[0] * img.shape[1])
         
         # 综合判断
-        # 正面：蓝色区域多 + 有人脸
-        # 反面：红色区域（国徽）+ 蓝色区域少 + 无人脸
-        if blue_ratio > 0.15 and has_face:
+        # 正面：有人脸区域 或 蓝色文字区域明显
+        # 反面：红色国徽区域明显 且 无人脸
+        if has_face:
             return 'front'
-        elif blue_ratio < 0.10 or (red_ratio > 0.02 and not has_face):
+        elif blue_ratio > 0.02:
+            return 'front'
+        elif red_ratio > 0.01 and not has_face:
             return 'back'
-        elif blue_ratio > 0.10:
-            return 'front'
         else:
+            # 默认返回反面（保守策略）
             return 'back'
             
     except Exception as e:
