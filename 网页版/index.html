@@ -79,6 +79,11 @@
       border-color: #f5222d;
     }
 
+    .form-group input:disabled {
+      background-color: #f5f5f5;
+      cursor: not-allowed;
+    }
+
     .error-message {
       color: #f5222d;
       font-size: 12px;
@@ -157,6 +162,103 @@
     .result-info strong {
       color: #1890ff;
     }
+
+    .login-status {
+      margin-bottom: 20px;
+      padding: 10px 15px;
+      background: #f6ffed;
+      border: 1px solid #b7eb8f;
+      border-radius: 8px;
+      color: #52c41a;
+      font-size: 14px;
+      display: none;
+    }
+
+    .login-status.show {
+      display: block;
+    }
+
+    .code-input-group {
+      display: flex;
+      gap: 10px;
+    }
+
+    .code-input-group input {
+      flex: 1;
+    }
+
+    .code-btn {
+      width: 120px;
+      height: 44px;
+      background-color: #1890ff;
+      color: white;
+      border: none;
+      border-radius: 8px;
+      cursor: pointer;
+      font-size: 14px;
+      transition: all 0.3s;
+    }
+
+    .code-btn:hover {
+      background-color: #096dd9;
+    }
+
+    .code-btn:disabled {
+      background-color: #d9d9d9;
+      cursor: not-allowed;
+    }
+
+    .file-input-wrapper {
+      position: relative;
+      overflow: hidden;
+      display: inline-block;
+      width: 100%;
+    }
+
+    .file-input-wrapper input[type=file] {
+      position: absolute;
+      left: -9999px;
+    }
+
+    .file-input-label {
+      display: block;
+      width: 100%;
+      height: 44px;
+      line-height: 44px;
+      text-align: center;
+      background-color: #f0f5ff;
+      border: 1px dashed #adc6ff;
+      border-radius: 8px;
+      color: #1890ff;
+      cursor: pointer;
+      transition: all 0.3s;
+    }
+
+    .file-input-label:hover {
+      background-color: #e6f7ff;
+    }
+
+    .file-name {
+      margin-top: 5px;
+      font-size: 12px;
+      color: #666;
+    }
+
+    .image-preview {
+      margin-top: 10px;
+      max-width: 100%;
+      max-height: 200px;
+      border-radius: 8px;
+      display: none;
+    }
+
+    .image-preview.show {
+      display: block;
+    }
+
+    .hidden {
+      display: none !important;
+    }
   </style>
 </head>
 <body>
@@ -165,7 +267,41 @@
   </div>
 
   <div class="content">
-    <div class="form-container">
+    <!-- 登录页面 -->
+    <div id="loginPage" class="form-container">
+      <h2 style="text-align: center; margin-bottom: 20px; color: #333;">手机号验证</h2>
+      
+      <div class="form-group">
+        <label for="loginPhoneInput">手机号</label>
+        <input type="tel" id="loginPhoneInput" placeholder="请输入手机号" maxlength="11">
+        <div class="error-message" id="loginPhoneError">请输入正确的手机号</div>
+      </div>
+
+      <div class="form-group">
+        <label for="codeInput">验证码</label>
+        <div class="code-input-group">
+          <input type="text" id="codeInput" placeholder="请输入验证码" maxlength="4">
+          <button class="code-btn" id="sendCodeBtn" onclick="handleSendCode()">发送验证码</button>
+        </div>
+        <div class="error-message" id="codeError">验证码不能为空</div>
+      </div>
+
+      <button class="register-btn" id="loginBtn" onclick="handleLogin()">
+        验证并登录
+      </button>
+
+      <div class="result" id="loginResult"></div>
+    </div>
+
+    <!-- 报到页面 -->
+    <div id="registerPage" class="form-container hidden">
+      <div class="login-status" id="loginStatus">
+        已验证手机号：<span id="verifiedPhone"></span>
+        <a href="#" onclick="handleLogout()" style="float: right; color: #1890ff;">退出登录</a>
+      </div>
+
+      <h2 style="text-align: center; margin-bottom: 20px; color: #333;">填写报到信息</h2>
+      
       <div class="form-group">
         <label for="nameInput">姓名</label>
         <input type="text" id="nameInput" placeholder="请输入姓名">
@@ -180,8 +316,19 @@
 
       <div class="form-group">
         <label for="phoneInput">手机号</label>
-        <input type="tel" id="phoneInput" placeholder="请输入手机号" maxlength="11">
+        <input type="tel" id="phoneInput" placeholder="请输入手机号" maxlength="11" disabled>
         <div class="error-message" id="phoneError">请输入正确的手机号</div>
+      </div>
+
+      <div class="form-group">
+        <label>身份证照片</label>
+        <div class="file-input-wrapper">
+          <input type="file" id="idCardPhoto" accept="image/jpeg,image/png,image/jpg" onchange="handleFileChange(event)">
+          <label for="idCardPhoto" class="file-input-label">点击选择身份证照片</label>
+        </div>
+        <div class="file-name" id="fileName"></div>
+        <img id="imagePreview" class="image-preview" alt="预览">
+        <div class="error-message" id="photoError">请上传身份证照片</div>
       </div>
 
       <button class="register-btn" id="registerBtn" onclick="handleRegister()">
@@ -195,6 +342,41 @@
 
   <script>
     let isLoading = false;
+    let countdown = 0;
+    let selectedFile = null;
+
+    // 页面加载时检查登录状态
+    window.onload = async function() {
+      await checkLoginStatus();
+    };
+
+    async function checkLoginStatus() {
+      try {
+        const response = await fetch('http://127.0.0.1:8000/api/check_login/');
+        const data = await response.json();
+        
+        if (data.is_logged_in) {
+          showRegisterPage(data.phone);
+        } else {
+          showLoginPage();
+        }
+      } catch (error) {
+        showLoginPage();
+      }
+    }
+
+    function showLoginPage() {
+      document.getElementById('loginPage').classList.remove('hidden');
+      document.getElementById('registerPage').classList.add('hidden');
+    }
+
+    function showRegisterPage(phone) {
+      document.getElementById('loginPage').classList.add('hidden');
+      document.getElementById('registerPage').classList.remove('hidden');
+      document.getElementById('loginStatus').classList.add('show');
+      document.getElementById('verifiedPhone').textContent = phone;
+      document.getElementById('phoneInput').value = phone;
+    }
 
     function clearErrors() {
       document.querySelectorAll('.error-message').forEach(el => el.classList.remove('show'));
@@ -204,15 +386,144 @@
     function showError(inputId, errorId, message) {
       const input = document.getElementById(inputId);
       const error = document.getElementById(errorId);
-      input.classList.add('error');
-      error.textContent = message;
-      error.classList.add('show');
+      if (input) input.classList.add('error');
+      if (error) {
+        error.textContent = message;
+        error.classList.add('show');
+      }
+    }
+
+    async function handleSendCode() {
+      if (countdown > 0) return;
+
+      const phone = document.getElementById('loginPhoneInput').value.trim();
+      
+      if (!phone || phone.length !== 11 || !/^\d+$/.test(phone)) {
+        showError('loginPhoneInput', 'loginPhoneError', '请输入正确的手机号');
+        return;
+      }
+
+      const btn = document.getElementById('sendCodeBtn');
+      btn.disabled = true;
+
+      try {
+        const response = await fetch('http://127.0.0.1:8000/api/send_code/', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({ phone: phone })
+        });
+
+        const data = await response.json();
+        
+        if (data.success) {
+          startCountdown();
+          showResult('loginResult', '验证码已发送，请查看控制台', true);
+        } else {
+          showResult('loginResult', data.message, false);
+          btn.disabled = false;
+        }
+      } catch (error) {
+        showResult('loginResult', '网络请求失败，请确保服务器正在运行', false);
+        btn.disabled = false;
+      }
+    }
+
+    function startCountdown() {
+      countdown = 60;
+      const btn = document.getElementById('sendCodeBtn');
+      btn.textContent = `${countdown}秒后重试`;
+      
+      const timer = setInterval(() => {
+        countdown--;
+        if (countdown <= 0) {
+          clearInterval(timer);
+          btn.textContent = '发送验证码';
+          btn.disabled = false;
+        } else {
+          btn.textContent = `${countdown}秒后重试`;
+        }
+      }, 1000);
+    }
+
+    async function handleLogin() {
+      if (isLoading) return;
+
+      clearErrors();
+
+      const phone = document.getElementById('loginPhoneInput').value.trim();
+      const code = document.getElementById('codeInput').value.trim();
+
+      let hasError = false;
+
+      if (!phone || phone.length !== 11 || !/^\d+$/.test(phone)) {
+        showError('loginPhoneInput', 'loginPhoneError', '请输入正确的手机号');
+        hasError = true;
+      }
+
+      if (!code) {
+        showError('codeInput', 'codeError', '验证码不能为空');
+        hasError = true;
+      }
+
+      if (hasError) return;
+
+      const btn = document.getElementById('loginBtn');
+      isLoading = true;
+      btn.disabled = true;
+      btn.textContent = '验证中...';
+
+      try {
+        const response = await fetch('http://127.0.0.1:8000/api/verify_code/', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({
+            phone: phone,
+            code: code
+          })
+        });
+
+        const data = await response.json();
+        
+        if (data.success) {
+          showResult('loginResult', '登录成功', true);
+          setTimeout(() => {
+            showRegisterPage(phone);
+          }, 1000);
+        } else {
+          showResult('loginResult', data.message, false);
+        }
+      } catch (error) {
+        showResult('loginResult', '网络请求失败，请确保服务器正在运行', false);
+      } finally {
+        isLoading = false;
+        btn.disabled = false;
+        btn.textContent = '验证并登录';
+      }
+    }
+
+    function handleFileChange(event) {
+      const file = event.target.files[0];
+      if (file) {
+        selectedFile = file;
+        document.getElementById('fileName').textContent = file.name;
+        
+        // 显示预览
+        const reader = new FileReader();
+        reader.onload = function(e) {
+          const preview = document.getElementById('imagePreview');
+          preview.src = e.target.result;
+          preview.classList.add('show');
+        };
+        reader.readAsDataURL(file);
+      }
     }
 
     async function handleRegister() {
-      if (isLoading) {
-        return;
-      }
+      if (isLoading) return;
 
       clearErrors();
 
@@ -232,17 +543,12 @@
         hasError = true;
       }
 
-      if (!phone) {
-        showError('phoneInput', 'phoneError', '手机号不能为空');
-        hasError = true;
-      } else if (phone.length !== 11 || !/^\d+$/.test(phone)) {
-        showError('phoneInput', 'phoneError', '手机号格式不正确');
+      if (!selectedFile) {
+        showError('idCardPhoto', 'photoError', '请上传身份证照片');
         hasError = true;
       }
 
-      if (hasError) {
-        return;
-      }
+      if (hasError) return;
 
       const btn = document.getElementById('registerBtn');
       const result = document.getElementById('result');
@@ -255,17 +561,16 @@
       result.textContent = '';
       resultInfo.style.display = 'none';
 
+      // 使用 FormData 提交文件
+      const formData = new FormData();
+      formData.append('name', name);
+      formData.append('student_id', studentId);
+      formData.append('id_card_photo', selectedFile);
+
       try {
-        const response = await fetch('http://127.0.0.1:8000/api/register_with_info/', {
+        const response = await fetch('http://127.0.0.1:8000/api/register_with_info_v3/', {
           method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-          },
-          body: JSON.stringify({
-            name: name,
-            student_id: studentId,
-            phone: phone
-          })
+          body: formData
         });
 
         const data = await response.json();
@@ -283,7 +588,9 @@
 
           document.getElementById('nameInput').value = '';
           document.getElementById('studentIdInput').value = '';
-          document.getElementById('phoneInput').value = '';
+          selectedFile = null;
+          document.getElementById('fileName').textContent = '';
+          document.getElementById('imagePreview').classList.remove('show');
         } else {
           result.className = 'result show error';
           result.textContent = data.message;
@@ -296,6 +603,24 @@
         btn.disabled = false;
         btn.textContent = '提交报到';
       }
+    }
+
+    async function handleLogout() {
+      try {
+        await fetch('http://127.0.0.1:8000/api/logout/');
+        showLoginPage();
+        document.getElementById('loginPhoneInput').value = '';
+        document.getElementById('codeInput').value = '';
+        clearErrors();
+      } catch (error) {
+        console.error('退出登录失败:', error);
+      }
+    }
+
+    function showResult(elementId, message, isSuccess) {
+      const result = document.getElementById(elementId);
+      result.className = 'result show ' + (isSuccess ? 'success' : 'error');
+      result.textContent = message;
     }
   </script>
 </body>

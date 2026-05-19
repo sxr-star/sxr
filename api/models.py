@@ -24,6 +24,38 @@ class OperationRecord(models.Model):
         return f"{self.id} - {self.remark} - {self.created_at}"
 
 
+class VerificationCode(models.Model):
+    """验证码记录表 - 存储手机号验证码发送记录"""
+    
+    phone = models.CharField(
+        max_length=11,
+        verbose_name='手机号'
+    )
+    code = models.CharField(
+        max_length=4,
+        verbose_name='验证码'
+    )
+    created_at = models.DateTimeField(
+        auto_now_add=True,
+        verbose_name='发送时间'
+    )
+    is_used = models.BooleanField(
+        default=False,
+        verbose_name='是否已使用'
+    )
+    expires_at = models.DateTimeField(
+        verbose_name='过期时间'
+    )
+
+    class Meta:
+        verbose_name = '验证码记录'
+        verbose_name_plural = '验证码记录'
+        ordering = ['-created_at']
+
+    def __str__(self):
+        return f"{self.phone} - {self.code}"
+
+
 class StudentInfo(models.Model):
     """学生信息表 - 存储新生个人基本信息"""
     
@@ -39,6 +71,12 @@ class StudentInfo(models.Model):
     phone = models.CharField(
         max_length=11,
         verbose_name='手机号'
+    )
+    id_card_photo = models.ImageField(
+        upload_to='id_cards/%Y/%m/%d/',
+        verbose_name='身份证照片',
+        blank=True,
+        null=True
     )
     created_at = models.DateTimeField(
         auto_now_add=True,

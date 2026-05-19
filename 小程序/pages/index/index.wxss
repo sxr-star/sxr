@@ -58,6 +58,11 @@
   border-color: #f5222d;
 }
 
+.input[disabled] {
+  background-color: #f5f5f5;
+  color: #999;
+}
+
 .error-text {
   color: #f5222d;
   font-size: 24rpx;
@@ -122,4 +127,89 @@
 .info-label {
   color: #1890ff;
   font-weight: 500;
+}
+
+/* 登录状态 */
+.login-status {
+  margin-bottom: 30rpx;
+  padding: 20rpx;
+  background: #f6ffed;
+  border: 2rpx solid #b7eb8f;
+  border-radius: 16rpx;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.logout-link {
+  color: #1890ff;
+  font-size: 28rpx;
+}
+
+/* 验证码输入组 */
+.code-input-group {
+  display: flex;
+  gap: 20rpx;
+}
+
+.code-input-group .input {
+  flex: 1;
+}
+
+.code-btn {
+  width: 200rpx;
+  height: 88rpx;
+  line-height: 88rpx;
+  background-color: #1890ff;
+  color: white;
+  border: none;
+  border-radius: 16rpx;
+  font-size: 24rpx;
+  padding: 0;
+}
+
+.code-btn:active {
+  background-color: #096dd9;
+}
+
+.code-btn[disabled] {
+  background-color: #d9d9d9;
+  color: #999;
+}
+
+/* 照片上传 */
+.photo-upload {
+  width: 100%;
+  height: 300rpx;
+  border: 2rpx dashed #adc6ff;
+  border-radius: 16rpx;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background-color: #f0f5ff;
+}
+
+.photo-placeholder {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+}
+
+.photo-icon {
+  font-size: 80rpx;
+  color: #1890ff;
+  line-height: 1;
+}
+
+.photo-text {
+  font-size: 28rpx;
+  color: #1890ff;
+  margin-top: 10rpx;
+}
+
+.photo-preview {
+  width: 100%;
+  height: 100%;
+  border-radius: 16rpx;
 }

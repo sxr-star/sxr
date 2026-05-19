@@ -1,5 +1,17 @@
 Page({
   data: {
+    // 登录页面数据
+    isLoggedIn: false,
+    loginPhone: '',
+    code: '',
+    loginPhoneError: '',
+    codeError: '',
+    loginLoading: false,
+    loginResult: null,
+    countdown: 0,
+    sending: false,
+    
+    // 报到页面数据
     loading: false,
     result: null,
     name: '',
@@ -7,9 +19,201 @@ Page({
     phone: '',
     nameError: '',
     studentIdError: '',
-    phoneError: ''
+    photoError: '',
+    tempImagePath: '',
+    verifiedPhone: ''
   },
 
+  onLoad() {
+    // 页面加载时检查登录状态
+    this.checkLoginStatus();
+  },
+
+  // 检查登录状态
+  checkLoginStatus() {
+    wx.request({
+      url: 'http://127.0.0.1:8000/api/check_login/',
+      method: 'GET',
+      success: (res) => {
+        if (res.data.is_logged_in) {
+          this.setData({
+            isLoggedIn: true,
+            phone: res.data.phone,
+            verifiedPhone: res.data.phone
+          });
+        }
+      }
+    });
+  },
+
+  // 登录页面输入处理
+  onLoginPhoneInput(e) {
+    this.setData({
+      loginPhone: e.detail.value,
+      loginPhoneError: ''
+    });
+  },
+
+  onCodeInput(e) {
+    this.setData({
+      code: e.detail.value,
+      codeError: ''
+    });
+  },
+
+  // 发送验证码
+  handleSendCode() {
+    if (this.data.countdown > 0 || this.data.sending) return;
+
+    const phone = this.data.loginPhone.trim();
+    
+    if (!phone || phone.length !== 11) {
+      this.setData({ loginPhoneError: '请输入正确的手机号' });
+      return;
+    }
+
+    this.setData({ sending: true });
+
+    wx.request({
+      url: 'http://127.0.0.1:8000/api/send_code/',
+      method: 'POST',
+      data: { phone: phone },
+      success: (res) => {
+        if (res.data.success) {
+          this.startCountdown();
+          wx.showToast({
+            title: '验证码已发送',
+            icon: 'success'
+          });
+        } else {
+          wx.showToast({
+            title: res.data.message,
+            icon: 'none'
+          });
+        }
+      },
+      fail: () => {
+        wx.showToast({
+          title: '网络请求失败',
+          icon: 'error'
+        });
+      },
+      complete: () => {
+        this.setData({ sending: false });
+      }
+    });
+  },
+
+  // 倒计时
+  startCountdown() {
+    let countdown = 60;
+    this.setData({ countdown });
+    
+    const timer = setInterval(() => {
+      countdown--;
+      if (countdown <= 0) {
+        clearInterval(timer);
+        this.setData({ countdown: 0 });
+      } else {
+        this.setData({ countdown });
+      }
+    }, 1000);
+  },
+
+  // 登录
+  handleLogin() {
+    if (this.data.loginLoading) return;
+
+    this.clearLoginErrors();
+
+    const phone = this.data.loginPhone.trim();
+    const code = this.data.code.trim();
+
+    let hasError = false;
+
+    if (!phone || phone.length !== 11) {
+      this.setData({ loginPhoneError: '请输入正确的手机号' });
+      hasError = true;
+    }
+
+    if (!code) {
+      this.setData({ codeError: '验证码不能为空' });
+      hasError = true;
+    }
+
+    if (hasError) return;
+
+    this.setData({ loginLoading: true, loginResult: null });
+
+    wx.request({
+      url: 'http://127.0.0.1:8000/api/verify_code/',
+      method: 'POST',
+      data: {
+        phone: phone,
+        code: code
+      },
+      success: (res) => {
+        if (res.data.success) {
+          this.setData({
+            isLoggedIn: true,
+            phone: phone,
+            verifiedPhone: phone,
+            loginResult: { success: true, message: '登录成功' }
+          });
+          wx.showToast({
+            title: '登录成功',
+            icon: 'success'
+          });
+        } else {
+          this.setData({
+            loginResult: { success: false, message: res.data.message }
+          });
+          wx.showToast({
+            title: res.data.message,
+            icon: 'none'
+          });
+        }
+      },
+      fail: () => {
+        this.setData({
+          loginResult: { success: false, message: '网络请求失败' }
+        });
+        wx.showToast({
+          title: '网络请求失败',
+          icon: 'error'
+        });
+      },
+      complete: () => {
+        this.setData({ loginLoading: false });
+      }
+    });
+  },
+
+  // 退出登录
+  handleLogout() {
+    wx.request({
+      url: 'http://127.0.0.1:8000/api/logout/',
+      method: 'GET',
+      success: () => {
+        this.setData({
+          isLoggedIn: false,
+          loginPhone: '',
+          code: '',
+          phone: '',
+          verifiedPhone: '',
+          name: '',
+          studentId: '',
+          tempImagePath: ''
+        });
+        wx.showToast({
+          title: '已退出登录',
+          icon: 'success'
+        });
+      }
+    });
+  },
+
+  // 报到页面输入处理
   onNameInput(e) {
     this.setData({
       name: e.detail.value,
@@ -24,23 +228,41 @@ Page({
     });
   },
 
-  onPhoneInput(e) {
-    this.setData({
-      phone: e.detail.value,
-      phoneError: ''
+  // 选择图片
+  chooseImage() {
+    wx.chooseImage({
+      count: 1,
+      sizeType: ['original', 'compressed'],
+      sourceType: ['album', 'camera'],
+      success: (res) => {
+        this.setData({
+          tempImagePath: res.tempFilePaths[0],
+          photoError: ''
+        });
+      }
     });
   },
 
+  // 清除登录错误
+  clearLoginErrors() {
+    this.setData({
+      loginPhoneError: '',
+      codeError: ''
+    });
+  },
+
+  // 清除报到错误
   clearErrors() {
     this.setData({
       nameError: '',
       studentIdError: '',
-      phoneError: ''
+      photoError: ''
     });
   },
 
+  // 验证表单
   validateForm() {
-    const { name, studentId, phone } = this.data;
+    const { name, studentId, tempImagePath } = this.data;
     let isValid = true;
 
     this.clearErrors();
@@ -55,51 +277,46 @@ Page({
       isValid = false;
     }
 
-    if (!phone) {
-      this.setData({ phoneError: '手机号不能为空' });
-      isValid = false;
-    } else if (phone.length !== 11) {
-      this.setData({ phoneError: '手机号格式不正确' });
+    if (!tempImagePath) {
+      this.setData({ photoError: '请上传身份证照片' });
       isValid = false;
     }
 
     return isValid;
   },
 
+  // 提交报到
   handleRegister() {
-    if (this.data.loading) {
-      return;
-    }
+    if (this.data.loading) return;
 
-    if (!this.validateForm()) {
-      return;
-    }
+    if (!this.validateForm()) return;
 
     this.setData({
       loading: true,
       result: null
     });
 
-    const { name, studentId, phone } = this.data;
+    const { name, studentId, tempImagePath } = this.data;
 
-    wx.request({
-      url: 'http://127.0.0.1:8000/api/register_with_info/',
-      method: 'POST',
-      data: {
+    wx.uploadFile({
+      url: 'http://127.0.0.1:8000/api/register_with_info_v3/',
+      filePath: tempImagePath,
+      name: 'id_card_photo',
+      formData: {
         name: name,
-        student_id: studentId,
-        phone: phone
+        student_id: studentId
       },
       success: (res) => {
+        const data = JSON.parse(res.data);
         this.setData({
-          result: res.data
+          result: data
         });
 
-        if (res.data.success) {
+        if (data.success) {
           this.setData({
             name: '',
             studentId: '',
-            phone: ''
+            tempImagePath: ''
           });
 
           wx.showToast({
@@ -109,7 +326,7 @@ Page({
           });
         } else {
           wx.showToast({
-            title: res.data.message,
+            title: data.message,
             icon: 'none',
             duration: 2000
           });

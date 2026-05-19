@@ -1,5 +1,13 @@
 from django.contrib import admin
-from .models import OperationRecord, StudentInfo, RegistrationRecord
+from .models import OperationRecord, StudentInfo, RegistrationRecord, VerificationCode
+
+
+@admin.register(VerificationCode)
+class VerificationCodeAdmin(admin.ModelAdmin):
+    list_display = ['id', 'phone', 'code', 'is_used', 'created_at', 'expires_at']
+    search_fields = ['phone', 'code']
+    list_filter = ['is_used', 'created_at']
+    ordering = ['-created_at']
 
 
 @admin.register(OperationRecord)
@@ -12,10 +20,15 @@ class OperationRecordAdmin(admin.ModelAdmin):
 
 @admin.register(StudentInfo)
 class StudentInfoAdmin(admin.ModelAdmin):
-    list_display = ['id', 'name', 'student_id', 'phone', 'created_at']
-    search_fields = ['student_id', 'name']
+    list_display = ['id', 'name', 'student_id', 'phone', 'has_id_card_photo', 'created_at']
+    search_fields = ['student_id', 'name', 'phone']
     list_filter = ['created_at']
     ordering = ['-created_at']
+
+    def has_id_card_photo(self, obj):
+        return bool(obj.id_card_photo)
+    has_id_card_photo.boolean = True
+    has_id_card_photo.short_description = '已上传身份证照片'
 
 
 @admin.register(RegistrationRecord)
