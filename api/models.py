@@ -72,9 +72,15 @@ class StudentInfo(models.Model):
         max_length=11,
         verbose_name='手机号'
     )
-    id_card_photo = models.ImageField(
+    id_card_photo_front = models.ImageField(
         upload_to='id_cards/%Y/%m/%d/',
-        verbose_name='身份证照片',
+        verbose_name='身份证正面照片',
+        blank=True,
+        null=True
+    )
+    id_card_photo_back = models.ImageField(
+        upload_to='id_cards/%Y/%m/%d/',
+        verbose_name='身份证反面照片',
         blank=True,
         null=True
     )

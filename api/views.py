@@ -308,29 +308,49 @@ def register_with_info_v3(request):
             'message': '学号不能为空'
         })
     
-    # 获取上传的身份证照片
-    id_card_photo = request.FILES.get('id_card_photo')
+    # 获取上传的身份证照片（正反面）
+    id_card_photo_front = request.FILES.get('id_card_photo_front')
+    id_card_photo_back = request.FILES.get('id_card_photo_back')
     
-    if not id_card_photo:
+    if not id_card_photo_front:
         return JsonResponse({
             'success': False,
-            'message': '请上传身份证照片'
+            'message': '请上传身份证正面照片'
+        })
+    
+    if not id_card_photo_back:
+        return JsonResponse({
+            'success': False,
+            'message': '请上传身份证反面照片'
         })
     
     # 校验图片格式
     allowed_types = ['image/jpeg', 'image/png', 'image/jpg']
-    if id_card_photo.content_type not in allowed_types:
+    
+    if id_card_photo_front.content_type not in allowed_types:
         return JsonResponse({
             'success': False,
-            'message': '图片格式不支持，请上传 JPG 或 PNG 格式'
+            'message': '身份证正面照片格式不支持，请上传 JPG 或 PNG 格式'
+        })
+    
+    if id_card_photo_back.content_type not in allowed_types:
+        return JsonResponse({
+            'success': False,
+            'message': '身份证反面照片格式不支持，请上传 JPG 或 PNG 格式'
         })
     
     # 校验图片大小（5MB = 5 * 1024 * 1024 bytes）
     max_size = 5 * 1024 * 1024
-    if id_card_photo.size > max_size:
+    if id_card_photo_front.size > max_size:
         return JsonResponse({
             'success': False,
-            'message': '图片大小不能超过5MB'
+            'message': '身份证正面照片大小不能超过5MB'
+        })
+    
+    if id_card_photo_back.size > max_size:
+        return JsonResponse({
+            'success': False,
+            'message': '身份证反面照片大小不能超过5MB'
         })
     
     try:
@@ -339,7 +359,8 @@ def register_with_info_v3(request):
             name=name,
             student_id=student_id,
             phone=phone,
-            id_card_photo=id_card_photo
+            id_card_photo_front=id_card_photo_front,
+            id_card_photo_back=id_card_photo_back
         )
         
         # 创建报到记录

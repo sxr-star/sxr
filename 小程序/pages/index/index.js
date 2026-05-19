@@ -19,8 +19,10 @@ Page({
     phone: '',
     nameError: '',
     studentIdError: '',
-    photoError: '',
-    tempImagePath: '',
+    photoErrorFront: '',
+    photoErrorBack: '',
+    tempImagePathFront: '',
+    tempImagePathBack: '',
     verifiedPhone: ''
   },
 
@@ -228,16 +230,31 @@ Page({
     });
   },
 
-  // 选择图片
-  chooseImage() {
+  // 选择正面图片
+  chooseImageFront() {
     wx.chooseImage({
       count: 1,
       sizeType: ['original', 'compressed'],
       sourceType: ['album', 'camera'],
       success: (res) => {
         this.setData({
-          tempImagePath: res.tempFilePaths[0],
-          photoError: ''
+          tempImagePathFront: res.tempFilePaths[0],
+          photoErrorFront: ''
+        });
+      }
+    });
+  },
+
+  // 选择反面图片
+  chooseImageBack() {
+    wx.chooseImage({
+      count: 1,
+      sizeType: ['original', 'compressed'],
+      sourceType: ['album', 'camera'],
+      success: (res) => {
+        this.setData({
+          tempImagePathBack: res.tempFilePaths[0],
+          photoErrorBack: ''
         });
       }
     });
@@ -256,13 +273,14 @@ Page({
     this.setData({
       nameError: '',
       studentIdError: '',
-      photoError: ''
+      photoErrorFront: '',
+      photoErrorBack: ''
     });
   },
 
   // 验证表单
   validateForm() {
-    const { name, studentId, tempImagePath } = this.data;
+    const { name, studentId, tempImagePathFront, tempImagePathBack } = this.data;
     let isValid = true;
 
     this.clearErrors();
@@ -277,8 +295,13 @@ Page({
       isValid = false;
     }
 
-    if (!tempImagePath) {
-      this.setData({ photoError: '请上传身份证照片' });
+    if (!tempImagePathFront) {
+      this.setData({ photoErrorFront: '请上传身份证正面照片' });
+      isValid = false;
+    }
+
+    if (!tempImagePathBack) {
+      this.setData({ photoErrorBack: '请上传身份证反面照片' });
       isValid = false;
     }
 
@@ -296,35 +319,75 @@ Page({
       result: null
     });
 
-    const { name, studentId, tempImagePath } = this.data;
+    const { name, studentId, tempImagePathFront, tempImagePathBack } = this.data;
 
+    // 小程序 uploadFile 一次只能上传一个文件，先上传正面
     wx.uploadFile({
       url: 'http://127.0.0.1:8000/api/register_with_info_v3/',
-      filePath: tempImagePath,
-      name: 'id_card_photo',
+      filePath: tempImagePathFront,
+      name: 'id_card_photo_front',
       formData: {
         name: name,
         student_id: studentId
       },
       success: (res) => {
         const data = JSON.parse(res.data);
-        this.setData({
-          result: data
-        });
 
         if (data.success) {
-          this.setData({
-            name: '',
-            studentId: '',
-            tempImagePath: ''
-          });
+          // 正面上传成功，再上传反面
+          wx.uploadFile({
+            url: 'http://127.0.0.1:8000/api/register_with_info_v3/',
+            filePath: tempImagePathBack,
+            name: 'id_card_photo_back',
+            formData: {
+              name: name,
+              student_id: studentId
+            },
+            success: (res2) => {
+              const data2 = JSON.parse(res2.data);
+              this.setData({
+                result: data2
+              });
 
-          wx.showToast({
-            title: '报到成功',
-            icon: 'success',
-            duration: 2000
+              if (data2.success) {
+                this.setData({
+                  name: '',
+                  studentId: '',
+                  tempImagePathFront: '',
+                  tempImagePathBack: ''
+                });
+
+                wx.showToast({
+                  title: '报到成功',
+                  icon: 'success',
+                  duration: 2000
+                });
+              } else {
+                wx.showToast({
+                  title: data2.message,
+                  icon: 'none',
+                  duration: 2000
+                });
+              }
+            },
+            fail: () => {
+              this.setData({
+                result: {
+                  success: false,
+                  message: '反面照片上传失败'
+                }
+              });
+              wx.showToast({
+                title: '反面照片上传失败',
+                icon: 'error',
+                duration: 2000
+              });
+            }
           });
         } else {
+          this.setData({
+            result: data
+          });
           wx.showToast({
             title: data.message,
             icon: 'none',

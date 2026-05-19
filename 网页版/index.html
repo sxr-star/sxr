@@ -321,14 +321,25 @@
       </div>
 
       <div class="form-group">
-        <label>身份证照片</label>
+        <label>身份证正面照片</label>
         <div class="file-input-wrapper">
-          <input type="file" id="idCardPhoto" accept="image/jpeg,image/png,image/jpg" onchange="handleFileChange(event)">
-          <label for="idCardPhoto" class="file-input-label">点击选择身份证照片</label>
+          <input type="file" id="idCardPhotoFront" accept="image/jpeg,image/png,image/jpg" onchange="handleFileChange(event, 'front')">
+          <label for="idCardPhotoFront" class="file-input-label">点击选择身份证正面照片</label>
         </div>
-        <div class="file-name" id="fileName"></div>
-        <img id="imagePreview" class="image-preview" alt="预览">
-        <div class="error-message" id="photoError">请上传身份证照片</div>
+        <div class="file-name" id="fileNameFront"></div>
+        <img id="imagePreviewFront" class="image-preview" alt="正面预览">
+        <div class="error-message" id="photoErrorFront">请上传身份证正面照片</div>
+      </div>
+
+      <div class="form-group">
+        <label>身份证反面照片</label>
+        <div class="file-input-wrapper">
+          <input type="file" id="idCardPhotoBack" accept="image/jpeg,image/png,image/jpg" onchange="handleFileChange(event, 'back')">
+          <label for="idCardPhotoBack" class="file-input-label">点击选择身份证反面照片</label>
+        </div>
+        <div class="file-name" id="fileNameBack"></div>
+        <img id="imagePreviewBack" class="image-preview" alt="反面预览">
+        <div class="error-message" id="photoErrorBack">请上传身份证反面照片</div>
       </div>
 
       <button class="register-btn" id="registerBtn" onclick="handleRegister()">
@@ -343,7 +354,8 @@
   <script>
     let isLoading = false;
     let countdown = 0;
-    let selectedFile = null;
+    let selectedFileFront = null;
+    let selectedFileBack = null;
 
     // 页面加载时检查登录状态
     window.onload = async function() {
@@ -505,20 +517,34 @@
       }
     }
 
-    function handleFileChange(event) {
+    function handleFileChange(event, type) {
       const file = event.target.files[0];
       if (file) {
-        selectedFile = file;
-        document.getElementById('fileName').textContent = file.name;
-        
-        // 显示预览
-        const reader = new FileReader();
-        reader.onload = function(e) {
-          const preview = document.getElementById('imagePreview');
-          preview.src = e.target.result;
-          preview.classList.add('show');
-        };
-        reader.readAsDataURL(file);
+        if (type === 'front') {
+          selectedFileFront = file;
+          document.getElementById('fileNameFront').textContent = file.name;
+          
+          // 显示预览
+          const reader = new FileReader();
+          reader.onload = function(e) {
+            const preview = document.getElementById('imagePreviewFront');
+            preview.src = e.target.result;
+            preview.classList.add('show');
+          };
+          reader.readAsDataURL(file);
+        } else if (type === 'back') {
+          selectedFileBack = file;
+          document.getElementById('fileNameBack').textContent = file.name;
+          
+          // 显示预览
+          const reader = new FileReader();
+          reader.onload = function(e) {
+            const preview = document.getElementById('imagePreviewBack');
+            preview.src = e.target.result;
+            preview.classList.add('show');
+          };
+          reader.readAsDataURL(file);
+        }
       }
     }
 
@@ -543,8 +569,13 @@
         hasError = true;
       }
 
-      if (!selectedFile) {
-        showError('idCardPhoto', 'photoError', '请上传身份证照片');
+      if (!selectedFileFront) {
+        showError('idCardPhotoFront', 'photoErrorFront', '请上传身份证正面照片');
+        hasError = true;
+      }
+
+      if (!selectedFileBack) {
+        showError('idCardPhotoBack', 'photoErrorBack', '请上传身份证反面照片');
         hasError = true;
       }
 
@@ -565,7 +596,8 @@
       const formData = new FormData();
       formData.append('name', name);
       formData.append('student_id', studentId);
-      formData.append('id_card_photo', selectedFile);
+      formData.append('id_card_photo_front', selectedFileFront);
+      formData.append('id_card_photo_back', selectedFileBack);
 
       try {
         const response = await fetch('http://127.0.0.1:8000/api/register_with_info_v3/', {
@@ -588,9 +620,12 @@
 
           document.getElementById('nameInput').value = '';
           document.getElementById('studentIdInput').value = '';
-          selectedFile = null;
-          document.getElementById('fileName').textContent = '';
-          document.getElementById('imagePreview').classList.remove('show');
+          selectedFileFront = null;
+          selectedFileBack = null;
+          document.getElementById('fileNameFront').textContent = '';
+          document.getElementById('fileNameBack').textContent = '';
+          document.getElementById('imagePreviewFront').classList.remove('show');
+          document.getElementById('imagePreviewBack').classList.remove('show');
         } else {
           result.className = 'result show error';
           result.textContent = data.message;

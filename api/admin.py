@@ -20,15 +20,20 @@ class OperationRecordAdmin(admin.ModelAdmin):
 
 @admin.register(StudentInfo)
 class StudentInfoAdmin(admin.ModelAdmin):
-    list_display = ['id', 'name', 'student_id', 'phone', 'has_id_card_photo', 'created_at']
+    list_display = ['id', 'name', 'student_id', 'phone', 'has_id_card_photo_front', 'has_id_card_photo_back', 'created_at']
     search_fields = ['student_id', 'name', 'phone']
     list_filter = ['created_at']
     ordering = ['-created_at']
 
-    def has_id_card_photo(self, obj):
-        return bool(obj.id_card_photo)
-    has_id_card_photo.boolean = True
-    has_id_card_photo.short_description = '已上传身份证照片'
+    def has_id_card_photo_front(self, obj):
+        return bool(obj.id_card_photo_front)
+    has_id_card_photo_front.boolean = True
+    has_id_card_photo_front.short_description = '已上传正面照片'
+
+    def has_id_card_photo_back(self, obj):
+        return bool(obj.id_card_photo_back)
+    has_id_card_photo_back.boolean = True
+    has_id_card_photo_back.short_description = '已上传反面照片'
 
 
 @admin.register(RegistrationRecord)
