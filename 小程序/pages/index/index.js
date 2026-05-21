@@ -23,7 +23,16 @@ Page({
     photoErrorBack: '',
     tempImagePathFront: '',
     tempImagePathBack: '',
-    verifiedPhone: ''
+    verifiedPhone: '',
+    
+    // 审核状态数据（4.0新增）
+    currentTab: 'register',
+    reviewStatus: null,
+    reviewStatusDisplay: '',
+    rejectReason: '',
+    dormitoryNumber: '',
+    statusLoading: false,
+    statusError: ''
   },
 
   onLoad() {
@@ -465,6 +474,51 @@ Page({
         this.setData({
           loading: false
         });
+      }
+    });
+  },
+
+  // 切换标签页（4.0新增）
+  switchTab(e) {
+    const tab = e.currentTarget.dataset.tab;
+    this.setData({ currentTab: tab });
+    if (tab === 'status') {
+      this.fetchReviewStatus();
+    }
+  },
+
+  // 查询审核状态（4.0新增）
+  fetchReviewStatus() {
+    this.setData({
+      statusLoading: true,
+      statusError: '',
+      reviewStatus: null
+    });
+
+    wx.request({
+      url: 'http://127.0.0.1:8000/api/review_status/',
+      method: 'GET',
+      success: (res) => {
+        if (res.data.success) {
+          this.setData({
+            reviewStatus: res.data.data.review_status,
+            reviewStatusDisplay: res.data.data.review_status_display,
+            rejectReason: res.data.data.reject_reason || '',
+            dormitoryNumber: res.data.data.dormitory_number || ''
+          });
+        } else {
+          this.setData({
+            statusError: res.data.message
+          });
+        }
+      },
+      fail: () => {
+        this.setData({
+          statusError: '网络请求失败'
+        });
+      },
+      complete: () => {
+        this.setData({ statusLoading: false });
       }
     });
   }

@@ -318,7 +318,15 @@
         <a href="#" onclick="handleLogout()" style="float: right; color: #1890ff;">退出登录</a>
       </div>
 
-      <h2 style="text-align: center; margin-bottom: 20px; color: #333;">填写报到信息</h2>
+      <!-- 页面切换标签 -->
+      <div style="display: flex; margin-bottom: 20px; border-bottom: 2px solid #f0f0f0;">
+        <div id="tabRegister" onclick="switchTab('register')" style="flex: 1; text-align: center; padding: 10px; cursor: pointer; border-bottom: 2px solid #1890ff; color: #1890ff; font-weight: 500;">报到登记</div>
+        <div id="tabStatus" onclick="switchTab('status')" style="flex: 1; text-align: center; padding: 10px; cursor: pointer; color: #666;">审核状态</div>
+      </div>
+
+      <!-- 报到表单 -->
+      <div id="registerFormSection">
+        <h2 style="text-align: center; margin-bottom: 20px; color: #333;">填写报到信息</h2>
       
       <div class="form-group">
         <label for="nameInput">姓名</label>
@@ -368,6 +376,20 @@
 
       <div class="result" id="result"></div>
       <div class="result-info" id="resultInfo" style="display: none;"></div>
+      </div>
+
+      <!-- 审核状态页面 -->
+      <div id="statusFormSection" class="hidden">
+        <h2 style="text-align: center; margin-bottom: 20px; color: #333;">审核状态查询</h2>
+        <div id="statusLoading" style="text-align: center; color: #666; padding: 40px;">加载中...</div>
+        <div id="statusContent" style="display: none;">
+          <div class="result-info" id="statusInfo"></div>
+          <button class="register-btn" onclick="fetchReviewStatus()" style="margin-top: 15px; background-color: #f0f5ff; color: #1890ff;">
+            刷新状态
+          </button>
+        </div>
+        <div id="statusError" class="result error" style="display: none;"></div>
+      </div>
     </div>
   </div>
 
@@ -716,6 +738,84 @@
       const result = document.getElementById(elementId);
       result.className = 'result show ' + (isSuccess ? 'success' : 'error');
       result.textContent = message;
+    }
+
+    // 切换标签页
+    function switchTab(tab) {
+      if (tab === 'register') {
+        document.getElementById('registerFormSection').classList.remove('hidden');
+        document.getElementById('statusFormSection').classList.add('hidden');
+        document.getElementById('tabRegister').style.borderBottom = '2px solid #1890ff';
+        document.getElementById('tabRegister').style.color = '#1890ff';
+        document.getElementById('tabRegister').style.fontWeight = '500';
+        document.getElementById('tabStatus').style.borderBottom = 'none';
+        document.getElementById('tabStatus').style.color = '#666';
+        document.getElementById('tabStatus').style.fontWeight = 'normal';
+      } else {
+        document.getElementById('registerFormSection').classList.add('hidden');
+        document.getElementById('statusFormSection').classList.remove('hidden');
+        document.getElementById('tabStatus').style.borderBottom = '2px solid #1890ff';
+        document.getElementById('tabStatus').style.color = '#1890ff';
+        document.getElementById('tabStatus').style.fontWeight = '500';
+        document.getElementById('tabRegister').style.borderBottom = 'none';
+        document.getElementById('tabRegister').style.color = '#666';
+        document.getElementById('tabRegister').style.fontWeight = 'normal';
+        fetchReviewStatus();
+      }
+    }
+
+    // 查询审核状态
+    async function fetchReviewStatus() {
+      document.getElementById('statusLoading').style.display = 'block';
+      document.getElementById('statusContent').style.display = 'none';
+      document.getElementById('statusError').style.display = 'none';
+
+      try {
+        const response = await fetch('http://127.0.0.1:8000/api/review_status/');
+        const data = await response.json();
+
+        document.getElementById('statusLoading').style.display = 'none';
+
+        if (data.success) {
+          const status = data.data;
+          let statusColor = '#faad14';
+          let statusBg = '#fffbe6';
+          let statusBorder = '#ffe58f';
+          if (status.review_status === 'approved') {
+            statusColor = '#52c41a';
+            statusBg = '#f6ffed';
+            statusBorder = '#b7eb8f';
+          } else if (status.review_status === 'rejected') {
+            statusColor = '#f5222d';
+            statusBg = '#fff2f0';
+            statusBorder = '#ffccc7';
+          }
+
+          let html = `
+            <p style="text-align: center; font-size: 16px; margin-bottom: 15px;">
+              <strong style="color: ${statusColor};">审核状态：${status.review_status_display}</strong>
+            </p>
+          `;
+
+          if (status.review_status === 'approved') {
+            html += `<p><strong>宿舍号：</strong>${status.dormitory_number || '待分配'}</p>`;
+          } else if (status.review_status === 'rejected') {
+            html += `<p><strong>驳回原因：</strong>${status.reject_reason || '无'}</p>`;
+          }
+
+          document.getElementById('statusInfo').innerHTML = html;
+          document.getElementById('statusInfo').style.background = statusBg;
+          document.getElementById('statusInfo').style.borderColor = statusBorder;
+          document.getElementById('statusContent').style.display = 'block';
+        } else {
+          document.getElementById('statusError').textContent = data.message;
+          document.getElementById('statusError').style.display = 'block';
+        }
+      } catch (error) {
+        document.getElementById('statusLoading').style.display = 'none';
+        document.getElementById('statusError').textContent = '网络请求失败';
+        document.getElementById('statusError').style.display = 'block';
+      }
     }
   </script>
 </body>

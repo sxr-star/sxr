@@ -63,7 +63,7 @@
   <!-- 报到页面 -->
   <view class="register-page" wx:if="{{isLoggedIn}}">
     <view class="header">
-      <text class="title">填写报到信息</text>
+      <text class="title">新生报到</text>
     </view>
     
     <view class="content">
@@ -73,88 +73,130 @@
           <text class="logout-link" bindtap="handleLogout">退出登录</text>
         </view>
 
-        <view class="form-group">
-          <text class="label">姓名</text>
-          <input 
-            class="input {{nameError ? 'error' : ''}}" 
-            type="text" 
-            placeholder="请输入姓名" 
-            value="{{name}}"
-            bindinput="onNameInput"
-          />
-          <text class="error-text" wx:if="{{nameError}}">{{nameError}}</text>
+        <!-- 标签切换 -->
+        <view class="tab-bar">
+          <view class="tab-item {{currentTab === 'register' ? 'tab-active' : ''}}" data-tab="register" bindtap="switchTab">报到登记</view>
+          <view class="tab-item {{currentTab === 'status' ? 'tab-active' : ''}}" data-tab="status" bindtap="switchTab">审核状态</view>
         </view>
 
-        <view class="form-group">
-          <text class="label">学号</text>
-          <input 
-            class="input {{studentIdError ? 'error' : ''}}" 
-            type="text" 
-            placeholder="请输入学号" 
-            value="{{studentId}}"
-            bindinput="onStudentIdInput"
-          />
-          <text class="error-text" wx:if="{{studentIdError}}">{{studentIdError}}</text>
+        <!-- 报到表单 -->
+        <view wx:if="{{currentTab === 'register'}}">
+          <view class="form-group">
+            <text class="label">姓名</text>
+            <input 
+              class="input {{nameError ? 'error' : ''}}" 
+              type="text" 
+              placeholder="请输入姓名" 
+              value="{{name}}"
+              bindinput="onNameInput"
+            />
+            <text class="error-text" wx:if="{{nameError}}">{{nameError}}</text>
+          </view>
+
+          <view class="form-group">
+            <text class="label">学号</text>
+            <input 
+              class="input {{studentIdError ? 'error' : ''}}" 
+              type="text" 
+              placeholder="请输入学号" 
+              value="{{studentId}}"
+              bindinput="onStudentIdInput"
+            />
+            <text class="error-text" wx:if="{{studentIdError}}">{{studentIdError}}</text>
+          </view>
+
+          <view class="form-group">
+            <text class="label">手机号</text>
+            <input 
+              class="input" 
+              type="number" 
+              value="{{phone}}"
+              disabled
+            />
+          </view>
+
+          <view class="form-group">
+            <text class="label">身份证正面照片 <text class="label-hint">（带人像的一面）</text></text>
+            <view class="photo-upload photo-upload-front" bindtap="chooseImageFront">
+              <image wx:if="{{tempImagePathFront}}" class="photo-preview" src="{{tempImagePathFront}}" mode="aspectFit"/>
+              <view wx:else class="photo-placeholder">
+                <text class="photo-icon">+</text>
+                <text class="photo-text">点击上传身份证正面照片</text>
+                <text class="photo-hint">人像面：含姓名、身份证号、照片</text>
+              </view>
+            </view>
+            <text class="error-text" wx:if="{{photoErrorFront}}">{{photoErrorFront}}</text>
+          </view>
+
+          <view class="form-group">
+            <text class="label">身份证反面照片 <text class="label-hint">（带国徽的一面）</text></text>
+            <view class="photo-upload photo-upload-back" bindtap="chooseImageBack">
+              <image wx:if="{{tempImagePathBack}}" class="photo-preview" src="{{tempImagePathBack}}" mode="aspectFit"/>
+              <view wx:else class="photo-placeholder">
+                <text class="photo-icon">+</text>
+                <text class="photo-text">点击上传身份证反面照片</text>
+                <text class="photo-hint">国徽面：含地址、签发机关、有效期</text>
+              </view>
+            </view>
+            <text class="error-text" wx:if="{{photoErrorBack}}">{{photoErrorBack}}</text>
+          </view>
+
+          <button 
+            class="register-btn" 
+            bindtap="handleRegister" 
+            loading="{{loading}}"
+            disabled="{{loading}}"
+          >
+            {{loading ? '提交中...' : '提交报到'}}
+          </button>
+
+          <view class="result" wx:if="{{result}}">
+            <text class="{{result.success ? 'success' : 'error'}}">
+              {{result.message}}
+            </text>
+          </view>
+
+          <view class="result-info" wx:if="{{result && result.success && result.data}}">
+            <text class="info-item"><text class="info-label">姓名：</text>{{result.data.name}}</text>
+            <text class="info-item"><text class="info-label">学号：</text>{{result.data.student_id}}</text>
+            <text class="info-item"><text class="info-label">手机号：</text>{{result.data.phone}}</text>
+            <text class="info-item"><text class="info-label">报到时间：</text>{{result.data.register_time}}</text>
+          </view>
         </view>
 
-        <view class="form-group">
-          <text class="label">手机号</text>
-          <input 
-            class="input" 
-            type="number" 
-            value="{{phone}}"
-            disabled
-          />
-        </view>
+        <!-- 审核状态页面 -->
+        <view wx:if="{{currentTab === 'status'}}">
+          <view class="status-container">
+            <view wx:if="{{statusLoading}}" class="status-loading">
+              <text>加载中...</text>
+            </view>
+            
+            <view wx:elif="{{statusError}}" class="status-error">
+              <text>{{statusError}}</text>
+            </view>
 
-        <view class="form-group">
-          <text class="label">身份证正面照片 <text class="label-hint">（带人像的一面）</text></text>
-          <view class="photo-upload photo-upload-front" bindtap="chooseImageFront">
-            <image wx:if="{{tempImagePathFront}}" class="photo-preview" src="{{tempImagePathFront}}" mode="aspectFit"/>
-            <view wx:else class="photo-placeholder">
-              <text class="photo-icon">+</text>
-              <text class="photo-text">点击上传身份证正面照片</text>
-              <text class="photo-hint">人像面：含姓名、身份证号、照片</text>
+            <view wx:elif="{{reviewStatus}}" class="status-content">
+              <view class="status-card status-{{reviewStatus}}">
+                <text class="status-title">审核状态：{{reviewStatusDisplay}}</text>
+              </view>
+              
+              <view wx:if="{{reviewStatus === 'approved'}}" class="status-detail">
+                <text class="detail-item"><text class="detail-label">宿舍号：</text>{{dormitoryNumber || '待分配'}}</text>
+              </view>
+
+              <view wx:if="{{reviewStatus === 'rejected'}}" class="status-detail">
+                <text class="detail-item"><text class="detail-label">驳回原因：</text>{{rejectReason || '无'}}</text>
+              </view>
+
+              <button class="refresh-btn" bindtap="fetchReviewStatus">刷新状态</button>
+            </view>
+
+            <view wx:else class="status-empty">
+              <text>暂无报到记录，请先提交报到信息</text>
             </view>
           </view>
-          <text class="error-text" wx:if="{{photoErrorFront}}">{{photoErrorFront}}</text>
         </view>
-
-        <view class="form-group">
-          <text class="label">身份证反面照片 <text class="label-hint">（带国徽的一面）</text></text>
-          <view class="photo-upload photo-upload-back" bindtap="chooseImageBack">
-            <image wx:if="{{tempImagePathBack}}" class="photo-preview" src="{{tempImagePathBack}}" mode="aspectFit"/>
-            <view wx:else class="photo-placeholder">
-              <text class="photo-icon">+</text>
-              <text class="photo-text">点击上传身份证反面照片</text>
-              <text class="photo-hint">国徽面：含地址、签发机关、有效期</text>
-            </view>
-          </view>
-          <text class="error-text" wx:if="{{photoErrorBack}}">{{photoErrorBack}}</text>
-        </view>
-
-        <button 
-          class="register-btn" 
-          bindtap="handleRegister" 
-          loading="{{loading}}"
-          disabled="{{loading}}"
-        >
-          {{loading ? '提交中...' : '提交报到'}}
-        </button>
       </view>
-    </view>
-    
-    <view class="result" wx:if="{{result}}">
-      <text class="{{result.success ? 'success' : 'error'}}">
-        {{result.message}}
-      </text>
-    </view>
-
-    <view class="result-info" wx:if="{{result && result.success && result.data}}">
-      <text class="info-item"><text class="info-label">姓名：</text>{{result.data.name}}</text>
-      <text class="info-item"><text class="info-label">学号：</text>{{result.data.student_id}}</text>
-      <text class="info-item"><text class="info-label">手机号：</text>{{result.data.phone}}</text>
-      <text class="info-item"><text class="info-label">报到时间：</text>{{result.data.register_time}}</text>
     </view>
   </view>
 </view>

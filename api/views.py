@@ -559,3 +559,136 @@ def register_with_info_v3(request):
             'success': False,
             'message': '学号已存在，请勿重复报到'
         })
+
+
+def review_status(request):
+    """
+    审核状态查询接口（4.0新增）
+    新生登录后查看自己的审核状态、驳回原因和宿舍号
+    """
+    is_logged_in = request.session.get('is_logged_in', False)
+    phone = request.session.get('verified_phone', '')
+    
+    if not is_logged_in or not phone:
+        return JsonResponse({
+            'success': False,
+            'message': '请先登录'
+        }, status=401)
+    
+    student = StudentInfo.objects.filter(phone=phone).first()
+    
+    if not student:
+        return JsonResponse({
+            'success': False,
+            'message': '未找到报到记录，请先提交报到信息'
+        })
+    
+    return JsonResponse({
+        'success': True,
+        'data': {
+            'review_status': student.review_status,
+            'review_status_display': student.get_review_status_display(),
+            'reject_reason': student.reject_reason,
+            'dormitory_number': student.dormitory_number
+        }
+    })
+
+
+@csrf_exempt
+@require_POST
+def admin_review(request):
+    """
+    管理员审核接口（4.0新增）
+    管理员审核学生报到信息，可选择通过或驳回
+    """
+    if not request.user.is_authenticated or not request.user.is_staff:
+        return JsonResponse({
+            'success': False,
+            'message': '权限不足，仅管理员可操作'
+        }, status=403)
+    
+    try:
+        data = json.loads(request.body)
+    except json.JSONDecodeError:
+        return JsonResponse({
+            'success': False,
+            'message': '请求数据格式错误'
+        }, status=400)
+    
+    student_id = data.get('student_id', '').strip()
+    action = data.get('action', '').strip()
+    reject_reason = data.get('reject_reason', '').strip()
+    dormitory_number = data.get('dormitory_number', '').strip()
+    
+    if not student_id:
+        return JsonResponse({
+            'success': False,
+            'message': '学号不能为空'
+        })
+    
+    if action not in ['approve', 'reject']:
+        return JsonResponse({
+            'success': False,
+            'message': '操作类型错误，应为approve或reject'
+        })
+    
+    student = StudentInfo.objects.filter(student_id=student_id).first()
+    
+    if not student:
+        return JsonResponse({
+            'success': False,
+            'message': '未找到该学号的学生记录'
+        })
+    
+    if action == 'approve':
+        student.review_status = 'approved'
+        if dormitory_number:
+            student.dormitory_number = dormitory_number
+        student.reject_reason = None
+    elif action == 'reject':
+        if not reject_reason:
+            return JsonResponse({
+                'success': False,
+                'message': '审核驳回时必须填写驳回原因'
+            })
+        student.review_status = 'rejected'
+        student.reject_reason = reject_reason
+        student.dormitory_number = None
+    
+    student.save()
+    
+    status_display = student.get_review_status_display()
+    return JsonResponse({
+        'success': True,
+        'message': f'审核成功，状态已更新为{status_display}'
+    })
+
+
+def admin_statistics(request):
+    """
+    统计数据接口（4.0新增）
+    管理员查看报到数据统计看板
+    """
+    if not request.user.is_authenticated or not request.user.is_staff:
+        return JsonResponse({
+            'success': False,
+            'message': '权限不足，仅管理员可查看'
+        }, status=403)
+    
+    total = StudentInfo.objects.count()
+    pending = StudentInfo.objects.filter(review_status='pending').count()
+    approved = StudentInfo.objects.filter(review_status='approved').count()
+    rejected = StudentInfo.objects.filter(review_status='rejected').count()
+    
+    pass_rate = round((approved / total * 100), 2) if total > 0 else 0
+    
+    return JsonResponse({
+        'success': True,
+        'data': {
+            'total': total,
+            'pending': pending,
+            'approved': approved,
+            'rejected': rejected,
+            'pass_rate': f'{pass_rate}%'
+        }
+    })

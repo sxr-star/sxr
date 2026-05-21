@@ -59,6 +59,13 @@ class VerificationCode(models.Model):
 class StudentInfo(models.Model):
     """学生信息表 - 存储新生个人基本信息"""
     
+    # 审核状态选项
+    REVIEW_STATUS_CHOICES = [
+        ('pending', '待审核'),
+        ('approved', '审核通过'),
+        ('rejected', '审核驳回'),
+    ]
+    
     name = models.CharField(
         max_length=50,
         verbose_name='姓名'
@@ -83,6 +90,23 @@ class StudentInfo(models.Model):
         verbose_name='身份证反面照片',
         blank=True,
         null=True
+    )
+    review_status = models.CharField(
+        max_length=20,
+        choices=REVIEW_STATUS_CHOICES,
+        default='pending',
+        verbose_name='审核状态'
+    )
+    reject_reason = models.TextField(
+        blank=True,
+        null=True,
+        verbose_name='驳回原因'
+    )
+    dormitory_number = models.CharField(
+        max_length=50,
+        blank=True,
+        null=True,
+        verbose_name='宿舍号'
     )
     created_at = models.DateTimeField(
         auto_now_add=True,

@@ -11,4 +11,8 @@ urlpatterns = [
     path('verify_code/', views.verify_code, name='verify_code'),
     path('check_login/', views.check_login, name='check_login'),
     path('logout/', views.logout, name='logout'),
+    # 4.0新增接口
+    path('review_status/', views.review_status, name='review_status'),
+    path('admin_review/', views.admin_review, name='admin_review'),
+    path('admin_statistics/', views.admin_statistics, name='admin_statistics'),
 ]
