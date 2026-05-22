@@ -555,11 +555,13 @@ def register_with_info_v3(request):
         request.session['temp_id_card_front_name'] = name
         request.session['temp_id_card_front_student_id'] = student_id
 
-        return JsonResponse({
+        response = JsonResponse({
             'success': True,
             'message': '请继续上传身份证反面照片',
             'waiting_for_back': True
         })
+        response['Content-Type'] = 'application/json; charset=utf-8'
+        return response
 
     elif not id_card_photo_front and id_card_photo_back:
         # 小程序第二次上传：只有反面照片
@@ -689,7 +691,13 @@ def register_with_info_v3(request):
         # 创建报到记录
         RegistrationRecord.objects.create(student=student)
         
-        return JsonResponse({
+        # 清理Session中临时存储的照片数据
+        request.session.pop('temp_id_card_front', None)
+        request.session.pop('temp_id_card_front_name', None)
+        request.session.pop('temp_id_card_front_student_id', None)
+        request.session.pop('temp_id_card_back_uploaded', None)
+        
+        response = JsonResponse({
             'success': True,
             'message': '报到成功',
             'data': {
@@ -699,11 +707,15 @@ def register_with_info_v3(request):
                 'register_time': student.created_at.strftime('%Y-%m-%d %H:%M:%S')
             }
         })
+        response['Content-Type'] = 'application/json; charset=utf-8'
+        return response
     except IntegrityError:
-        return JsonResponse({
+        response = JsonResponse({
             'success': False,
             'message': '学号已存在，请勿重复报到'
         })
+        response['Content-Type'] = 'application/json; charset=utf-8'
+        return response
 
 
 def review_status(request):
