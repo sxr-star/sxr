@@ -142,3 +142,63 @@ class RegistrationRecord(models.Model):
 
     def __str__(self):
         return f"{self.student.name} - {self.register_time}"
+
+
+class Dormitory(models.Model):
+    """宿舍信息表 - 存储宿舍基本信息"""
+    
+    dormitory_number = models.CharField(
+        max_length=50,
+        unique=True,
+        verbose_name='宿舍号'
+    )
+    building = models.CharField(
+        max_length=50,
+        verbose_name='楼栋'
+    )
+    floor = models.IntegerField(
+        verbose_name='楼层'
+    )
+    room_number = models.CharField(
+        max_length=20,
+        verbose_name='房间号'
+    )
+    capacity = models.IntegerField(
+        default=4,
+        verbose_name='容纳人数'
+    )
+    description = models.TextField(
+        blank=True,
+        null=True,
+        verbose_name='宿舍描述'
+    )
+    created_at = models.DateTimeField(
+        auto_now_add=True,
+        verbose_name='创建时间'
+    )
+
+    class Meta:
+        verbose_name = '宿舍信息'
+        verbose_name_plural = '宿舍信息'
+        ordering = ['dormitory_number']
+
+    def __str__(self):
+        return f"{self.dormitory_number} ({self.building})"
+
+    @property
+    def current_occupancy(self):
+        """当前入住人数"""
+        return StudentInfo.objects.filter(
+            dormitory_number=self.dormitory_number,
+            review_status='approved'
+        ).count()
+
+    @property
+    def is_full(self):
+        """是否已满"""
+        return self.current_occupancy >= self.capacity
+
+    @property
+    def available_beds(self):
+        """剩余床位"""
+        return self.capacity - self.current_occupancy

@@ -32,7 +32,14 @@ Page({
     rejectReason: '',
     dormitoryNumber: '',
     statusLoading: false,
-    statusError: ''
+    statusError: '',
+    
+    // 宿舍管理数据
+    showDormitoryBtn: false,
+    dormitoryInfo: null,
+    roommates: [],
+    dormitoryLoading: false,
+    dormitoryError: ''
   },
 
   onLoad() {
@@ -484,6 +491,8 @@ Page({
     this.setData({ currentTab: tab });
     if (tab === 'status') {
       this.fetchReviewStatus();
+    } else if (tab === 'dormitory') {
+      this.fetchDormitoryInfo();
     }
   },
 
@@ -519,6 +528,41 @@ Page({
       },
       complete: () => {
         this.setData({ statusLoading: false });
+      }
+    });
+  },
+
+  // 查询宿舍信息
+  fetchDormitoryInfo() {
+    this.setData({
+      dormitoryLoading: true,
+      dormitoryError: '',
+      dormitoryInfo: null,
+      roommates: []
+    });
+
+    wx.request({
+      url: 'http://127.0.0.1:8000/api/dormitory_info/',
+      method: 'GET',
+      success: (res) => {
+        if (res.data.success) {
+          this.setData({
+            dormitoryInfo: res.data.data.dormitory,
+            roommates: res.data.data.roommates
+          });
+        } else {
+          this.setData({
+            dormitoryError: res.data.message
+          });
+        }
+      },
+      fail: () => {
+        this.setData({
+          dormitoryError: '网络请求失败'
+        });
+      },
+      complete: () => {
+        this.setData({ dormitoryLoading: false });
       }
     });
   }

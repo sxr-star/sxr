@@ -1,5 +1,5 @@
 from django.contrib import admin
-from .models import OperationRecord, StudentInfo, RegistrationRecord, VerificationCode
+from .models import OperationRecord, StudentInfo, RegistrationRecord, VerificationCode, Dormitory
 
 
 @admin.register(VerificationCode)
@@ -70,3 +70,11 @@ class RegistrationRecordAdmin(admin.ModelAdmin):
     def student_id(self, obj):
         return obj.student.student_id
     student_id.short_description = '学号'
+
+
+@admin.register(Dormitory)
+class DormitoryAdmin(admin.ModelAdmin):
+    list_display = ['id', 'dormitory_number', 'building', 'floor', 'room_number', 'capacity', 'current_occupancy', 'available_beds', 'is_full']
+    search_fields = ['dormitory_number', 'building', 'room_number']
+    list_filter = ['building', 'floor', 'capacity']
+    ordering = ['dormitory_number']

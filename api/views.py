@@ -13,7 +13,7 @@ from django.views.decorators.http import require_POST
 from django.db import IntegrityError
 from django.utils import timezone
 from django.core.files.uploadedfile import InMemoryUploadedFile
-from .models import OperationRecord, StudentInfo, RegistrationRecord, VerificationCode
+from .models import OperationRecord, StudentInfo, RegistrationRecord, VerificationCode, Dormitory
 
 
 def get_image_hash(image_file):
@@ -691,4 +691,164 @@ def admin_statistics(request):
             'rejected': rejected,
             'pass_rate': f'{pass_rate}%'
         }
+    })
+
+
+def dormitory_info(request):
+    """
+    宿舍信息查询接口
+    审核通过的学生查看自己的宿舍信息和室友列表
+    """
+    is_logged_in = request.session.get('is_logged_in', False)
+    phone = request.session.get('verified_phone', '')
+    
+    if not is_logged_in or not phone:
+        return JsonResponse({
+            'success': False,
+            'message': '请先登录'
+        }, status=401)
+    
+    student = StudentInfo.objects.filter(phone=phone).first()
+    
+    if not student:
+        return JsonResponse({
+            'success': False,
+            'message': '未找到报到记录'
+        })
+    
+    if student.review_status != 'approved':
+        return JsonResponse({
+            'success': False,
+            'message': '审核未通过，无法查看宿舍信息'
+        })
+    
+    if not student.dormitory_number:
+        return JsonResponse({
+            'success': False,
+            'message': '暂未分配宿舍，请耐心等待'
+        })
+    
+    # 查询宿舍信息
+    dormitory = Dormitory.objects.filter(dormitory_number=student.dormitory_number).first()
+    
+    # 查询室友列表（同宿舍的其他已审核通过学生）
+    roommates = StudentInfo.objects.filter(
+        dormitory_number=student.dormitory_number,
+        review_status='approved'
+    ).exclude(id=student.id).values('name', 'student_id', 'phone')
+    
+    dormitory_data = {
+        'dormitory_number': student.dormitory_number,
+        'building': dormitory.building if dormitory else '-',
+        'floor': dormitory.floor if dormitory else '-',
+        'room_number': dormitory.room_number if dormitory else '-',
+        'capacity': dormitory.capacity if dormitory else 4,
+        'description': dormitory.description if dormitory else '',
+        'current_occupancy': len(roommates) + 1,
+        'available_beds': (dormitory.capacity if dormitory else 4) - len(roommates) - 1
+    }
+    
+    return JsonResponse({
+        'success': True,
+        'data': {
+            'student_name': student.name,
+            'student_id': student.student_id,
+            'dormitory': dormitory_data,
+            'roommates': list(roommates)
+        }
+    })
+
+
+@csrf_exempt
+@require_POST
+def admin_dormitory_assign(request):
+    """
+    管理员分配宿舍接口
+    管理员为学生分配宿舍号
+    """
+    if not request.user.is_authenticated or not request.user.is_staff:
+        return JsonResponse({
+            'success': False,
+            'message': '权限不足，仅管理员可操作'
+        }, status=403)
+    
+    try:
+        data = json.loads(request.body)
+    except json.JSONDecodeError:
+        return JsonResponse({
+            'success': False,
+            'message': '请求数据格式错误'
+        }, status=400)
+    
+    student_id = data.get('student_id', '').strip()
+    dormitory_number = data.get('dormitory_number', '').strip()
+    
+    if not student_id or not dormitory_number:
+        return JsonResponse({
+            'success': False,
+            'message': '学号和宿舍号不能为空'
+        })
+    
+    student = StudentInfo.objects.filter(student_id=student_id).first()
+    
+    if not student:
+        return JsonResponse({
+            'success': False,
+            'message': '未找到该学号的学生记录'
+        })
+    
+    if student.review_status != 'approved':
+        return JsonResponse({
+            'success': False,
+            'message': '该学生审核未通过，无法分配宿舍'
+        })
+    
+    # 检查宿舍是否存在，不存在则创建
+    dormitory = Dormitory.objects.filter(dormitory_number=dormitory_number).first()
+    if not dormitory:
+        # 自动创建宿舍记录
+        Dormitory.objects.create(
+            dormitory_number=dormitory_number,
+            building=dormitory_number[:2] if len(dormitory_number) >= 2 else dormitory_number,
+            floor=int(dormitory_number[2:3]) if len(dormitory_number) >= 3 else 1,
+            room_number=dormitory_number
+        )
+    
+    student.dormitory_number = dormitory_number
+    student.save()
+    
+    return JsonResponse({
+        'success': True,
+        'message': f'已成功为学生 {student.name} 分配宿舍 {dormitory_number}'
+    })
+
+
+def admin_dormitory_list(request):
+    """
+    管理员查看宿舍列表接口
+    """
+    if not request.user.is_authenticated or not request.user.is_staff:
+        return JsonResponse({
+            'success': False,
+            'message': '权限不足，仅管理员可查看'
+        }, status=403)
+    
+    dormitories = Dormitory.objects.all()
+    
+    data = []
+    for dorm in dormitories:
+        data.append({
+            'dormitory_number': dorm.dormitory_number,
+            'building': dorm.building,
+            'floor': dorm.floor,
+            'room_number': dorm.room_number,
+            'capacity': dorm.capacity,
+            'current_occupancy': dorm.current_occupancy,
+            'available_beds': dorm.available_beds,
+            'is_full': dorm.is_full
+        })
+    
+    return JsonResponse({
+        'success': True,
+        'data': data
     })

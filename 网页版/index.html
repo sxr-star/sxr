@@ -379,16 +379,41 @@
       </div>
 
       <!-- 审核状态页面 -->
-      <div id="statusFormSection" class="hidden">
-        <h2 style="text-align: center; margin-bottom: 20px; color: #333;">审核状态查询</h2>
-        <div id="statusLoading" style="text-align: center; color: #666; padding: 40px;">加载中...</div>
-        <div id="statusContent" style="display: none;">
-          <div class="result-info" id="statusInfo"></div>
-          <button class="register-btn" onclick="fetchReviewStatus()" style="margin-top: 15px; background-color: #f0f5ff; color: #1890ff;">
-            刷新状态
-          </button>
+        <div id="statusFormSection" class="hidden">
+          <h2 style="text-align: center; margin-bottom: 20px; color: #333;">审核状态查询</h2>
+          <div id="statusLoading" style="text-align: center; color: #666; padding: 40px;">加载中...</div>
+          <div id="statusContent" style="display: none;">
+            <div class="result-info" id="statusInfo"></div>
+            <button class="register-btn" onclick="fetchReviewStatus()" style="margin-top: 15px; background-color: #f0f5ff; color: #1890ff;">
+              刷新状态
+            </button>
+            <!-- 审核通过且已分配宿舍后显示宿舍管理入口 -->
+            <button id="dormitoryBtn" class="register-btn" onclick="switchTab('dormitory')" style="margin-top: 10px; background-color: #52c41a; color: #fff; display: none;">
+              查看宿舍信息
+            </button>
+          </div>
+          <div id="statusError" class="result error" style="display: none;"></div>
         </div>
-        <div id="statusError" class="result error" style="display: none;"></div>
+
+        <!-- 宿舍管理页面 -->
+        <div id="dormitoryFormSection" class="hidden">
+          <h2 style="text-align: center; margin-bottom: 20px; color: #333;">我的宿舍</h2>
+          <div id="dormitoryLoading" style="text-align: center; color: #666; padding: 40px;">加载中...</div>
+          <div id="dormitoryContent" style="display: none;">
+            <div class="result-info" id="dormitoryInfo" style="background: #f6ffed; border-color: #b7eb8f;"></div>
+            <div id="roommatesSection" style="margin-top: 15px;">
+              <h3 style="color: #333; font-size: 16px; margin-bottom: 10px;">室友信息</h3>
+              <div id="roommatesList"></div>
+            </div>
+            <button class="register-btn" onclick="fetchDormitoryInfo()" style="margin-top: 15px; background-color: #f0f5ff; color: #1890ff;">
+              刷新信息
+            </button>
+            <button class="register-btn" onclick="switchTab('status')" style="margin-top: 10px; background-color: #fafafa; color: #666;">
+              返回状态查询
+            </button>
+          </div>
+          <div id="dormitoryError" class="result error" style="display: none;"></div>
+        </div>
       </div>
     </div>
   </div>
@@ -742,25 +767,33 @@
 
     // 切换标签页
     function switchTab(tab) {
+      // 隐藏所有内容区域
+      document.getElementById('registerFormSection').classList.add('hidden');
+      document.getElementById('statusFormSection').classList.add('hidden');
+      document.getElementById('dormitoryFormSection').classList.add('hidden');
+      
+      // 重置标签样式
+      document.getElementById('tabRegister').style.borderBottom = 'none';
+      document.getElementById('tabRegister').style.color = '#666';
+      document.getElementById('tabRegister').style.fontWeight = 'normal';
+      document.getElementById('tabStatus').style.borderBottom = 'none';
+      document.getElementById('tabStatus').style.color = '#666';
+      document.getElementById('tabStatus').style.fontWeight = 'normal';
+      
       if (tab === 'register') {
         document.getElementById('registerFormSection').classList.remove('hidden');
-        document.getElementById('statusFormSection').classList.add('hidden');
         document.getElementById('tabRegister').style.borderBottom = '2px solid #1890ff';
         document.getElementById('tabRegister').style.color = '#1890ff';
         document.getElementById('tabRegister').style.fontWeight = '500';
-        document.getElementById('tabStatus').style.borderBottom = 'none';
-        document.getElementById('tabStatus').style.color = '#666';
-        document.getElementById('tabStatus').style.fontWeight = 'normal';
-      } else {
-        document.getElementById('registerFormSection').classList.add('hidden');
+      } else if (tab === 'status') {
         document.getElementById('statusFormSection').classList.remove('hidden');
         document.getElementById('tabStatus').style.borderBottom = '2px solid #1890ff';
         document.getElementById('tabStatus').style.color = '#1890ff';
         document.getElementById('tabStatus').style.fontWeight = '500';
-        document.getElementById('tabRegister').style.borderBottom = 'none';
-        document.getElementById('tabRegister').style.color = '#666';
-        document.getElementById('tabRegister').style.fontWeight = 'normal';
         fetchReviewStatus();
+      } else if (tab === 'dormitory') {
+        document.getElementById('dormitoryFormSection').classList.remove('hidden');
+        fetchDormitoryInfo();
       }
     }
 
@@ -807,6 +840,13 @@
           document.getElementById('statusInfo').style.background = statusBg;
           document.getElementById('statusInfo').style.borderColor = statusBorder;
           document.getElementById('statusContent').style.display = 'block';
+          
+          // 审核通过且已分配宿舍，显示宿舍管理入口
+          if (status.review_status === 'approved' && status.dormitory_number) {
+            document.getElementById('dormitoryBtn').style.display = 'block';
+          } else {
+            document.getElementById('dormitoryBtn').style.display = 'none';
+          }
         } else {
           document.getElementById('statusError').textContent = data.message;
           document.getElementById('statusError').style.display = 'block';
@@ -815,6 +855,65 @@
         document.getElementById('statusLoading').style.display = 'none';
         document.getElementById('statusError').textContent = '网络请求失败';
         document.getElementById('statusError').style.display = 'block';
+      }
+    }
+
+    // 查询宿舍信息
+    async function fetchDormitoryInfo() {
+      document.getElementById('dormitoryLoading').style.display = 'block';
+      document.getElementById('dormitoryContent').style.display = 'none';
+      document.getElementById('dormitoryError').style.display = 'none';
+
+      try {
+        const response = await fetch('http://127.0.0.1:8000/api/dormitory_info/');
+        const data = await response.json();
+
+        document.getElementById('dormitoryLoading').style.display = 'none';
+
+        if (data.success) {
+          const info = data.data;
+          const dorm = info.dormitory;
+          
+          let html = `
+            <p><strong>宿舍号：</strong>${dorm.dormitory_number}</p>
+            <p><strong>楼栋：</strong>${dorm.building}</p>
+            <p><strong>楼层：</strong>${dorm.floor}楼</p>
+            <p><strong>房间号：</strong>${dorm.room_number}</p>
+            <p><strong>容纳人数：</strong>${dorm.capacity}人</p>
+            <p><strong>当前入住：</strong>${dorm.current_occupancy}人</p>
+            <p><strong>剩余床位：</strong>${dorm.available_beds}个</p>
+          `;
+          if (dorm.description) {
+            html += `<p><strong>备注：</strong>${dorm.description}</p>`;
+          }
+          
+          document.getElementById('dormitoryInfo').innerHTML = html;
+          
+          // 渲染室友列表
+          let roommatesHtml = '';
+          if (info.roommates && info.roommates.length > 0) {
+            info.roommates.forEach((mate, index) => {
+              roommatesHtml += `
+                <div style="padding: 10px; background: #fafafa; border-radius: 8px; margin-bottom: 8px;">
+                  <p style="margin: 0;"><strong>室友${index + 1}：</strong>${mate.name}</p>
+                  <p style="margin: 5px 0 0 0; font-size: 12px; color: #666;">学号：${mate.student_id}</p>
+                </div>
+              `;
+            });
+          } else {
+            roommatesHtml = '<p style="color: #999; text-align: center;">暂无其他室友入住</p>';
+          }
+          document.getElementById('roommatesList').innerHTML = roommatesHtml;
+          
+          document.getElementById('dormitoryContent').style.display = 'block';
+        } else {
+          document.getElementById('dormitoryError').textContent = data.message;
+          document.getElementById('dormitoryError').style.display = 'block';
+        }
+      } catch (error) {
+        document.getElementById('dormitoryLoading').style.display = 'none';
+        document.getElementById('dormitoryError').textContent = '网络请求失败';
+        document.getElementById('dormitoryError').style.display = 'block';
       }
     }
   </script>

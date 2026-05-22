@@ -15,4 +15,8 @@ urlpatterns = [
     path('review_status/', views.review_status, name='review_status'),
     path('admin_review/', views.admin_review, name='admin_review'),
     path('admin_statistics/', views.admin_statistics, name='admin_statistics'),
+    # 宿舍管理接口
+    path('dormitory_info/', views.dormitory_info, name='dormitory_info'),
+    path('admin_dormitory_assign/', views.admin_dormitory_assign, name='admin_dormitory_assign'),
+    path('admin_dormitory_list/', views.admin_dormitory_list, name='admin_dormitory_list'),
 ]
