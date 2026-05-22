@@ -425,15 +425,44 @@ Page({
 
   // 验证表单
   async validateForm() {
-    const { name, studentId, tempImagePathFront, tempImagePathBack } = this.data;
+    let { name, studentId, tempImagePathFront, tempImagePathBack } = this.data;
     let isValid = true;
 
-    console.log('DEBUG validateForm:', {
+    console.log('DEBUG validateForm - from data:', {
       name: !!name,
       studentId: !!studentId,
       tempImagePathFront: tempImagePathFront,
       tempImagePathBack: tempImagePathBack
     });
+
+    // 从存储中获取图片路径（作为备用）
+    let storedFront = '';
+    let storedBack = '';
+    try {
+      storedFront = wx.getStorageSync('tempImagePathFront') || '';
+      storedBack = wx.getStorageSync('tempImagePathBack') || '';
+    } catch (e) {
+      console.log('DEBUG: getStorageSync in validate failed', e);
+    }
+    
+    console.log('DEBUG validateForm - from storage:', {
+      storedFront: storedFront,
+      storedBack: storedBack
+    });
+
+    // 如果data中的路径为空但存储中有，使用存储中的值
+    if (!tempImagePathFront && storedFront) {
+      console.log('DEBUG: using stored path for front');
+      tempImagePathFront = storedFront;
+      // 同时更新data
+      this.setData({ tempImagePathFront: storedFront });
+    }
+    if (!tempImagePathBack && storedBack) {
+      console.log('DEBUG: using stored path for back');
+      tempImagePathBack = storedBack;
+      // 同时更新data
+      this.setData({ tempImagePathBack: storedBack });
+    }
 
     this.clearErrors();
 
