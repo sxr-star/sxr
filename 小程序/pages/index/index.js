@@ -287,12 +287,20 @@ Page({
       sizeType: ['original', 'compressed'],
       sourceType: ['album', 'camera'],
       success: (res) => {
+        console.log('DEBUG chooseImageFront success:', res.tempFilePaths[0]);
         this.setData({
           tempImagePathFront: res.tempFilePaths[0],
           photoErrorFront: ''
         });
         // 检查是否为同一张图片
         this.checkImagesNotSame();
+        // 验证后立即检查数据
+        setTimeout(() => {
+          console.log('DEBUG after setData - tempImagePathFront:', this.data.tempImagePathFront);
+        }, 100);
+      },
+      fail: (err) => {
+        console.log('DEBUG chooseImageFront fail:', err);
       }
     });
   },
@@ -337,6 +345,13 @@ Page({
     const { name, studentId, tempImagePathFront, tempImagePathBack } = this.data;
     let isValid = true;
 
+    console.log('DEBUG validateForm:', {
+      name: !!name,
+      studentId: !!studentId,
+      tempImagePathFront: tempImagePathFront,
+      tempImagePathBack: tempImagePathBack
+    });
+
     this.clearErrors();
 
     if (!name) {
@@ -350,11 +365,13 @@ Page({
     }
 
     if (!tempImagePathFront) {
+      console.log('DEBUG: tempImagePathFront is empty');
       this.setData({ photoErrorFront: '请上传身份证正面照片' });
       isValid = false;
     }
 
     if (!tempImagePathBack) {
+      console.log('DEBUG: tempImagePathBack is empty');
       this.setData({ photoErrorBack: '请上传身份证反面照片' });
       isValid = false;
     }
