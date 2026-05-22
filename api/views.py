@@ -2,6 +2,8 @@ import json
 import os
 import random
 import re
+import base64
+from io import BytesIO
 from datetime import timedelta
 from PIL import Image
 import hashlib
@@ -413,12 +415,49 @@ def logout(request):
     })
 
 
-@csrf_exempt
-@require_POST
+def base64_to_image(base64_string, filename='image.jpg'):
+    """将base64编码的图片转换为InMemoryUploadedFile"""
+    try:
+        # 解码base64
+        image_data = base64.b64decode(base64_string)
+        # 创建BytesIO对象
+        image_io = BytesIO(image_data)
+        # 获取文件大小
+        file_size = len(image_data)
+        # 获取文件类型
+        if base64_string.startswith('/9j/'):
+            content_type = 'image/jpeg'
+            if not filename.lower().endswith('.jpg'):
+                filename = filename.rsplit('.', 1)[0] + '.jpg'
+        elif base64_string.startswith('iVBOR'):
+            content_type = 'image/png'
+            if not filename.lower().endswith('.png'):
+                filename = filename.rsplit('.', 1)[0] + '.png'
+        else:
+            content_type = 'image/jpeg'
+        
+        # 创建InMemoryUploadedFile
+        image_file = InMemoryUploadedFile(
+            image_io,
+            None,
+            filename,
+            content_type,
+            file_size,
+            None
+        )
+        return image_file
+    except Exception as e:
+        print(f"base64转换失败: {e}")
+        return None
+
+
 def register_with_info_v3(request):
     """
-    信息提交与身份证上传接口（3.0新增）
+    信息提交与身份证上传接口（3.0新增，4.0支持base64）
     需要登录状态，从Session获取手机号，接收姓名、学号和身份证照片
+    支持两种上传方式：
+    1. 传统文件上传：request.FILES
+    2. Base64编码上传：request.POST或JSON中的base64字段
     """
     # 检查登录状态
     is_logged_in = request.session.get('is_logged_in', False)
@@ -430,9 +469,15 @@ def register_with_info_v3(request):
             'message': '请先登录'
         }, status=401)
     
-    # 获取文本字段
-    name = request.POST.get('name', '').strip()
-    student_id = request.POST.get('student_id', '').strip()
+    # 获取数据（支持JSON和表单两种格式）
+    try:
+        data = json.loads(request.body) if request.body else {}
+    except:
+        data = {}
+    
+    # 获取文本字段（优先从JSON，然后从POST）
+    name = data.get('name', '').strip() or request.POST.get('name', '').strip()
+    student_id = data.get('student_id', '').strip() or request.POST.get('student_id', '').strip()
     
     # 校验文本字段
     if not name:
@@ -448,8 +493,23 @@ def register_with_info_v3(request):
         })
     
     # 获取上传的身份证照片（正反面）
-    id_card_photo_front = request.FILES.get('id_card_photo_front')
-    id_card_photo_back = request.FILES.get('id_card_photo_back')
+    id_card_photo_front = None
+    id_card_photo_back = None
+    
+    # 尝试从base64获取图片（小程序使用）
+    front_base64 = data.get('id_card_photo_front_base64') or request.POST.get('id_card_photo_front_base64')
+    back_base64 = data.get('id_card_photo_back_base64') or request.POST.get('id_card_photo_back_base64')
+    
+    if front_base64:
+        id_card_photo_front = base64_to_image(front_base64, 'id_card_front.jpg')
+    if back_base64:
+        id_card_photo_back = base64_to_image(back_base64, 'id_card_back.jpg')
+    
+    # 如果base64方式失败，尝试从FILES获取（网页版使用）
+    if not id_card_photo_front:
+        id_card_photo_front = request.FILES.get('id_card_photo_front')
+    if not id_card_photo_back:
+        id_card_photo_back = request.FILES.get('id_card_photo_back')
     
     if not id_card_photo_front:
         return JsonResponse({
@@ -466,13 +526,13 @@ def register_with_info_v3(request):
     # 校验图片格式
     allowed_types = ['image/jpeg', 'image/png', 'image/jpg']
     
-    if id_card_photo_front.content_type not in allowed_types:
+    if hasattr(id_card_photo_front, 'content_type') and id_card_photo_front.content_type not in allowed_types:
         return JsonResponse({
             'success': False,
             'message': '身份证正面照片格式不支持，请上传 JPG 或 PNG 格式'
         })
     
-    if id_card_photo_back.content_type not in allowed_types:
+    if hasattr(id_card_photo_back, 'content_type') and id_card_photo_back.content_type not in allowed_types:
         return JsonResponse({
             'success': False,
             'message': '身份证反面照片格式不支持，请上传 JPG 或 PNG 格式'
@@ -843,9 +903,9 @@ def admin_dormitory_list(request):
             'floor': dorm.floor,
             'room_number': dorm.room_number,
             'capacity': dorm.capacity,
-            'current_occupancy': dorm.current_occupancy,
-            'available_beds': dorm.available_beds,
-            'is_full': dorm.is_full
+            'current_occupancy': dorm.get_current_occupancy(),
+            'available_beds': dorm.get_available_beds(),
+            'is_full': dorm.get_is_full()
         })
     
     return JsonResponse({
