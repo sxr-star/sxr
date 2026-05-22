@@ -77,7 +77,6 @@
         <view class="tab-bar">
           <view class="tab-item {{currentTab === 'register' ? 'tab-active' : ''}}" data-tab="register" bindtap="switchTab">报到登记</view>
           <view class="tab-item {{currentTab === 'status' ? 'tab-active' : ''}}" data-tab="status" bindtap="switchTab">审核状态</view>
-          <view class="tab-item {{currentTab === 'dormitory' ? 'tab-active' : ''}}" data-tab="dormitory" bindtap="switchTab" wx:if="{{reviewStatus === 'approved' && dormitoryNumber}}">我的宿舍</view>
         </view>
 
         <!-- 报到表单 -->
@@ -194,50 +193,6 @@
 
             <view wx:else class="status-empty">
               <text>暂无报到记录，请先提交报到信息</text>
-            </view>
-          </view>
-        </view>
-
-        <!-- 宿舍管理页面 -->
-        <view wx:if="{{currentTab === 'dormitory'}}">
-          <view class="dormitory-container">
-            <view wx:if="{{dormitoryLoading}}" class="status-loading">
-              <text>加载中...</text>
-            </view>
-            
-            <view wx:elif="{{dormitoryError}}" class="status-error">
-              <text>{{dormitoryError}}</text>
-            </view>
-
-            <view wx:elif="{{dormitoryInfo}}" class="dormitory-content">
-              <view class="dormitory-card">
-                <text class="dormitory-title">{{dormitoryInfo.dormitory_number}}</text>
-                <view class="dormitory-detail">
-                  <text class="detail-row"><text class="detail-label">楼栋：</text>{{dormitoryInfo.building}}</text>
-                  <text class="detail-row"><text class="detail-label">楼层：</text>{{dormitoryInfo.floor}}楼</text>
-                  <text class="detail-row"><text class="detail-label">房间号：</text>{{dormitoryInfo.room_number}}</text>
-                  <text class="detail-row"><text class="detail-label">容纳人数：</text>{{dormitoryInfo.capacity}}人</text>
-                  <text class="detail-row"><text class="detail-label">当前入住：</text>{{dormitoryInfo.current_occupancy}}人</text>
-                  <text class="detail-row"><text class="detail-label">剩余床位：</text>{{dormitoryInfo.available_beds}}个</text>
-                </view>
-              </view>
-
-              <view class="roommates-section" wx:if="{{roommates.length > 0}}">
-                <text class="section-title">室友信息</text>
-                <view class="roommate-list">
-                  <view class="roommate-item" wx:for="{{roommates}}" wx:key="student_id">
-                    <text class="roommate-name">{{item.name}}</text>
-                    <text class="roommate-id">学号：{{item.student_id}}</text>
-                  </view>
-                </view>
-              </view>
-
-              <view class="roommates-section" wx:else>
-                <text class="section-title">室友信息</text>
-                <text class="empty-text">暂无其他室友入住</text>
-              </view>
-
-              <button class="refresh-btn" bindtap="fetchDormitoryInfo">刷新信息</button>
             </view>
           </view>
         </view>

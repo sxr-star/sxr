@@ -387,34 +387,32 @@
             <button class="register-btn" onclick="fetchReviewStatus()" style="margin-top: 15px; background-color: #f0f5ff; color: #1890ff;">
               刷新状态
             </button>
-            <!-- 审核通过且已分配宿舍后显示宿舍管理入口 -->
-            <button id="dormitoryBtn" class="register-btn" onclick="switchTab('dormitory')" style="margin-top: 10px; background-color: #52c41a; color: #fff; display: none;">
-              查看宿舍信息
-            </button>
           </div>
           <div id="statusError" class="result error" style="display: none;"></div>
         </div>
-
-        <!-- 宿舍管理页面 -->
-        <div id="dormitoryFormSection" class="hidden">
-          <h2 style="text-align: center; margin-bottom: 20px; color: #333;">我的宿舍</h2>
-          <div id="dormitoryLoading" style="text-align: center; color: #666; padding: 40px;">加载中...</div>
-          <div id="dormitoryContent" style="display: none;">
-            <div class="result-info" id="dormitoryInfo" style="background: #f6ffed; border-color: #b7eb8f;"></div>
-            <div id="roommatesSection" style="margin-top: 15px;">
-              <h3 style="color: #333; font-size: 16px; margin-bottom: 10px;">室友信息</h3>
-              <div id="roommatesList"></div>
-            </div>
-            <button class="register-btn" onclick="fetchDormitoryInfo()" style="margin-top: 15px; background-color: #f0f5ff; color: #1890ff;">
-              刷新信息
-            </button>
-            <button class="register-btn" onclick="switchTab('status')" style="margin-top: 10px; background-color: #fafafa; color: #666;">
-              返回状态查询
-            </button>
-          </div>
-          <div id="dormitoryError" class="result error" style="display: none;"></div>
-        </div>
       </div>
+    </div>
+
+    <!-- 宿舍管理页面（独立页面，审核通过后自动跳转） -->
+    <div id="dormitoryPage" class="form-container hidden">
+      <div class="login-status" id="dormitoryLoginStatus">
+        已验证手机号：<span id="dormitoryVerifiedPhone"></span>
+        <a href="#" onclick="goToRegisterPage()" style="float: right; color: #1890ff;">返回报到页</a>
+        <a href="#" onclick="handleLogout()" style="float: right; margin-right: 15px; color: #1890ff;">退出登录</a>
+      </div>
+      <h2 style="text-align: center; margin-bottom: 20px; color: #333;">宿舍信息</h2>
+      <div id="dormitoryLoading" style="text-align: center; color: #666; padding: 40px;">加载中...</div>
+      <div id="dormitoryContent" style="display: none;">
+        <div class="result-info" id="dormitoryInfo" style="background: #f6ffed; border-color: #b7eb8f;"></div>
+        <div id="roommatesSection" style="margin-top: 15px;">
+          <h3 style="color: #333; font-size: 16px; margin-bottom: 10px;">室友信息</h3>
+          <div id="roommatesList"></div>
+        </div>
+        <button class="register-btn" onclick="fetchDormitoryInfo()" style="margin-top: 15px; background-color: #f0f5ff; color: #1890ff;">
+          刷新信息
+        </button>
+      </div>
+      <div id="dormitoryError" class="result error" style="display: none;"></div>
     </div>
   </div>
 
@@ -436,6 +434,16 @@
         
         if (data.is_logged_in) {
           showRegisterPage(data.phone);
+          // 自动检查审核状态，如果已通过则直接跳转宿舍页
+          try {
+            const statusRes = await fetch('http://127.0.0.1:8000/api/review_status/');
+            const statusData = await statusRes.json();
+            if (statusData.success && statusData.data.review_status === 'approved') {
+              goToDormitoryPage();
+            }
+          } catch (e) {
+            // 忽略状态检查错误
+          }
         } else {
           showLoginPage();
         }
@@ -447,11 +455,13 @@
     function showLoginPage() {
       document.getElementById('loginPage').classList.remove('hidden');
       document.getElementById('registerPage').classList.add('hidden');
+      document.getElementById('dormitoryPage').classList.add('hidden');
     }
 
     function showRegisterPage(phone) {
       document.getElementById('loginPage').classList.add('hidden');
       document.getElementById('registerPage').classList.remove('hidden');
+      document.getElementById('dormitoryPage').classList.add('hidden');
       document.getElementById('loginStatus').classList.add('show');
       document.getElementById('verifiedPhone').textContent = phone;
       document.getElementById('phoneInput').value = phone;
@@ -765,12 +775,11 @@
       result.textContent = message;
     }
 
-    // 切换标签页
+    // 切换标签页（仅在报到页面内切换）
     function switchTab(tab) {
       // 隐藏所有内容区域
       document.getElementById('registerFormSection').classList.add('hidden');
       document.getElementById('statusFormSection').classList.add('hidden');
-      document.getElementById('dormitoryFormSection').classList.add('hidden');
       
       // 重置标签样式
       document.getElementById('tabRegister').style.borderBottom = 'none';
@@ -791,10 +800,20 @@
         document.getElementById('tabStatus').style.color = '#1890ff';
         document.getElementById('tabStatus').style.fontWeight = '500';
         fetchReviewStatus();
-      } else if (tab === 'dormitory') {
-        document.getElementById('dormitoryFormSection').classList.remove('hidden');
-        fetchDormitoryInfo();
       }
+    }
+
+    // 跳转到宿舍管理页面（独立页面）
+    function goToDormitoryPage() {
+      document.getElementById('registerPage').classList.add('hidden');
+      document.getElementById('dormitoryPage').classList.remove('hidden');
+      fetchDormitoryInfo();
+    }
+
+    // 返回报到页面
+    function goToRegisterPage() {
+      document.getElementById('dormitoryPage').classList.add('hidden');
+      document.getElementById('registerPage').classList.remove('hidden');
     }
 
     // 查询审核状态
@@ -841,11 +860,11 @@
           document.getElementById('statusInfo').style.borderColor = statusBorder;
           document.getElementById('statusContent').style.display = 'block';
           
-          // 审核通过且已分配宿舍，显示宿舍管理入口
-          if (status.review_status === 'approved' && status.dormitory_number) {
-            document.getElementById('dormitoryBtn').style.display = 'block';
-          } else {
-            document.getElementById('dormitoryBtn').style.display = 'none';
+          // 审核通过，自动跳转到宿舍管理页面
+          if (status.review_status === 'approved') {
+            setTimeout(() => {
+              goToDormitoryPage();
+            }, 1000);
           }
         } else {
           document.getElementById('statusError').textContent = data.message;

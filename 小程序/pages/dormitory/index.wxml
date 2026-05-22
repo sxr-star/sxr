@@ -1,0 +1,47 @@
+<view class="dormitory-page">
+  <view class="header">
+    <text class="title">宿舍信息</text>
+  </view>
+
+  <view class="content">
+    <view wx:if="{{loading}}" class="status-loading">
+      <text>加载中...</text>
+    </view>
+
+    <view wx:elif="{{error}}" class="status-error">
+      <text>{{error}}</text>
+    </view>
+
+    <view wx:elif="{{dormitoryInfo}}" class="dormitory-content">
+      <view class="dormitory-card">
+        <text class="dormitory-title">{{dormitoryInfo.dormitory_number}}</text>
+        <view class="dormitory-detail">
+          <text class="detail-row"><text class="detail-label">楼栋：</text>{{dormitoryInfo.building}}</text>
+          <text class="detail-row"><text class="detail-label">楼层：</text>{{dormitoryInfo.floor}}楼</text>
+          <text class="detail-row"><text class="detail-label">房间号：</text>{{dormitoryInfo.room_number}}</text>
+          <text class="detail-row"><text class="detail-label">容纳人数：</text>{{dormitoryInfo.capacity}}人</text>
+          <text class="detail-row"><text class="detail-label">当前入住：</text>{{dormitoryInfo.current_occupancy}}人</text>
+          <text class="detail-row"><text class="detail-label">剩余床位：</text>{{dormitoryInfo.available_beds}}个</text>
+        </view>
+      </view>
+
+      <view class="roommates-section" wx:if="{{roommates.length > 0}}">
+        <text class="section-title">室友信息</text>
+        <view class="roommate-list">
+          <view class="roommate-item" wx:for="{{roommates}}" wx:key="student_id">
+            <text class="roommate-name">{{item.name}}</text>
+            <text class="roommate-id">学号：{{item.student_id}}</text>
+          </view>
+        </view>
+      </view>
+
+      <view class="roommates-section" wx:else>
+        <text class="section-title">室友信息</text>
+        <text class="empty-text">暂无其他室友入住</text>
+      </view>
+
+      <button class="refresh-btn" bindtap="fetchDormitoryInfo">刷新信息</button>
+      <button class="back-btn" bindtap="goBack">返回报到页</button>
+    </view>
+  </view>
+</view>

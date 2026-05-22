@@ -1,0 +1,140 @@
+.dormitory-page {
+  min-height: 100vh;
+  background: #f5f7fa;
+}
+
+.header {
+  background: #1890ff;
+  padding: 40rpx 30rpx;
+  text-align: center;
+}
+
+.title {
+  color: #fff;
+  font-size: 36rpx;
+  font-weight: bold;
+}
+
+.content {
+  padding: 30rpx;
+}
+
+.status-loading, .status-error {
+  text-align: center;
+  padding: 80rpx 0;
+  color: #999;
+  font-size: 28rpx;
+}
+
+.status-error {
+  color: #f5222d;
+}
+
+.dormitory-content {
+  padding: 20rpx 0;
+}
+
+.dormitory-card {
+  background: #f6ffed;
+  border: 2rpx solid #b7eb8f;
+  border-radius: 16rpx;
+  padding: 40rpx;
+  margin-bottom: 30rpx;
+}
+
+.dormitory-title {
+  display: block;
+  font-size: 40rpx;
+  font-weight: bold;
+  color: #52c41a;
+  text-align: center;
+  margin-bottom: 20rpx;
+}
+
+.dormitory-detail {
+  padding: 20rpx 0;
+}
+
+.detail-row {
+  display: block;
+  font-size: 28rpx;
+  color: #333;
+  margin: 10rpx 0;
+}
+
+.roommates-section {
+  margin-bottom: 30rpx;
+}
+
+.section-title {
+  display: block;
+  font-size: 32rpx;
+  font-weight: 500;
+  color: #333;
+  margin-bottom: 20rpx;
+}
+
+.roommate-list {
+  display: flex;
+  flex-direction: column;
+  gap: 16rpx;
+}
+
+.roommate-item {
+  padding: 24rpx;
+  background: #fafafa;
+  border-radius: 12rpx;
+  border: 2rpx solid #f0f0f0;
+}
+
+.roommate-name {
+  display: block;
+  font-size: 30rpx;
+  color: #333;
+  font-weight: 500;
+}
+
+.roommate-id {
+  display: block;
+  font-size: 24rpx;
+  color: #666;
+  margin-top: 8rpx;
+}
+
+.empty-text {
+  text-align: center;
+  color: #999;
+  font-size: 28rpx;
+  padding: 40rpx 0;
+}
+
+.refresh-btn {
+  width: 100%;
+  height: 80rpx;
+  line-height: 80rpx;
+  background: #f0f5ff;
+  color: #1890ff;
+  border-radius: 40rpx;
+  font-size: 30rpx;
+  border: none;
+  margin-bottom: 20rpx;
+}
+
+.refresh-btn:active {
+  background: #e6f7ff;
+}
+
+.back-btn {
+  width: 100%;
+  height: 80rpx;
+  line-height: 80rpx;
+  background: #fafafa;
+  color: #666;
+  border-radius: 40rpx;
+  font-size: 30rpx;
+  border: none;
+}
+
+.back-btn:active {
+  background: #f0f0f0;
+}

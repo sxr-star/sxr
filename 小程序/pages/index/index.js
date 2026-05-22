@@ -32,14 +32,7 @@ Page({
     rejectReason: '',
     dormitoryNumber: '',
     statusLoading: false,
-    statusError: '',
-    
-    // 宿舍管理数据
-    showDormitoryBtn: false,
-    dormitoryInfo: null,
-    roommates: [],
-    dormitoryLoading: false,
-    dormitoryError: ''
+    statusError: ''
   },
 
   onLoad() {
@@ -491,8 +484,6 @@ Page({
     this.setData({ currentTab: tab });
     if (tab === 'status') {
       this.fetchReviewStatus();
-    } else if (tab === 'dormitory') {
-      this.fetchDormitoryInfo();
     }
   },
 
@@ -509,12 +500,19 @@ Page({
       method: 'GET',
       success: (res) => {
         if (res.data.success) {
+          const reviewStatus = res.data.data.review_status;
           this.setData({
-            reviewStatus: res.data.data.review_status,
+            reviewStatus: reviewStatus,
             reviewStatusDisplay: res.data.data.review_status_display,
             rejectReason: res.data.data.reject_reason || '',
             dormitoryNumber: res.data.data.dormitory_number || ''
           });
+          // 审核通过，跳转到宿舍管理页面
+          if (reviewStatus === 'approved') {
+            wx.navigateTo({
+              url: '/pages/dormitory/index'
+            });
+          }
         } else {
           this.setData({
             statusError: res.data.message
@@ -528,41 +526,6 @@ Page({
       },
       complete: () => {
         this.setData({ statusLoading: false });
-      }
-    });
-  },
-
-  // 查询宿舍信息
-  fetchDormitoryInfo() {
-    this.setData({
-      dormitoryLoading: true,
-      dormitoryError: '',
-      dormitoryInfo: null,
-      roommates: []
-    });
-
-    wx.request({
-      url: 'http://127.0.0.1:8000/api/dormitory_info/',
-      method: 'GET',
-      success: (res) => {
-        if (res.data.success) {
-          this.setData({
-            dormitoryInfo: res.data.data.dormitory,
-            roommates: res.data.data.roommates
-          });
-        } else {
-          this.setData({
-            dormitoryError: res.data.message
-          });
-        }
-      },
-      fail: () => {
-        this.setData({
-          dormitoryError: '网络请求失败'
-        });
-      },
-      complete: () => {
-        this.setData({ dormitoryLoading: false });
       }
     });
   }
