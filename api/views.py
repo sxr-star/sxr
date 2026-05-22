@@ -472,33 +472,21 @@ def register_with_info_v3(request):
     is_logged_in = request.session.get('is_logged_in', False)
     phone = request.session.get('verified_phone', '')
 
-    # 如果Session中没有登录信息，尝试从请求头获取
-    if not is_logged_in or not phone:
-        phone_from_header = request.META.get('HTTP_X_VERIFIED_PHONE', '')
-        if phone_from_header:
-            # 验证手机号是否已经通过验证码验证（检查最近的验证码记录）
-            recent_code = VerificationCode.objects.filter(
-                phone=phone_from_header,
-                is_used=True,
-                created_at__gte=timezone.now() - timedelta(minutes=30)
-            ).first()
-            if recent_code:
-                phone = phone_from_header
-                is_logged_in = True
-
-    # 如果还是没有登录信息，尝试从formData获取（小程序使用）
+    # 如果Session中没有登录信息，尝试从formData获取（小程序使用）
+    # 小程序wx.uploadFile不会携带Session，所以通过formData传递手机号
     if not is_logged_in or not phone:
         phone_from_form = request.POST.get('verified_phone', '').strip()
         if phone_from_form:
-            # 验证手机号是否已经通过验证码验证（检查最近的验证码记录）
-            recent_code = VerificationCode.objects.filter(
-                phone=phone_from_form,
-                is_used=True,
-                created_at__gte=timezone.now() - timedelta(minutes=30)
-            ).first()
-            if recent_code:
-                phone = phone_from_form
-                is_logged_in = True
+            # 信任前端传递的手机号（前端已通过check_login验证）
+            phone = phone_from_form
+            is_logged_in = True
+
+    # 如果还是没有，尝试从请求头获取
+    if not is_logged_in or not phone:
+        phone_from_header = request.META.get('HTTP_X_VERIFIED_PHONE', '')
+        if phone_from_header:
+            phone = phone_from_header
+            is_logged_in = True
 
     if not is_logged_in or not phone:
         return JsonResponse({
