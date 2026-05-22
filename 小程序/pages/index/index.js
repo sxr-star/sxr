@@ -40,6 +40,21 @@ Page({
     this.checkLoginStatus();
   },
 
+  onShow() {
+    // 页面显示时检查图片路径是否有效
+    const { tempImagePathFront, tempImagePathBack } = this.data;
+    console.log('DEBUG onShow - tempImagePathFront:', tempImagePathFront);
+    console.log('DEBUG onShow - tempImagePathBack:', tempImagePathBack);
+    
+    // 如果图片路径存在但验证仍然失败，尝试重新设置
+    if (tempImagePathFront) {
+      this.setData({ photoErrorFront: '' });
+    }
+    if (tempImagePathBack) {
+      this.setData({ photoErrorBack: '' });
+    }
+  },
+
   // 检查登录状态
   checkLoginStatus() {
     wx.request({
