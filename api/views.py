@@ -475,7 +475,10 @@ def register_with_info_v3(request):
     # 如果Session中没有登录信息，尝试从formData获取（小程序使用）
     # 小程序wx.uploadFile不会携带Session，所以通过formData传递手机号
     if not is_logged_in or not phone:
-        phone_from_form = request.POST.get('verified_phone', '').strip()
+        phone_from_form = request.POST.get('verified_phone', '')
+        print(f"DEBUG: verified_phone from POST: '{phone_from_form}'")
+        phone_from_form = phone_from_form.strip()
+        print(f"DEBUG: verified_phone after strip: '{phone_from_form}'")
         if phone_from_form:
             # 信任前端传递的手机号（前端已通过check_login验证）
             phone = phone_from_form

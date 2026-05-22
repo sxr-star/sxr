@@ -393,21 +393,10 @@ Page({
     this.tempName = name;
     this.tempStudentId = studentId;
 
-    // 获取当前Session信息（通过check_login接口）
-    const sessionInfo = await new Promise((resolve) => {
-      wx.request({
-        url: 'http://127.0.0.1:8000/api/check_login/',
-        method: 'GET',
-        success: (res) => {
-          resolve(res.data);
-        },
-        fail: () => {
-          resolve({ is_logged_in: false });
-        }
-      });
-    });
+    // 获取登录的手机号（信任本地保存的值）
+    const verifiedPhone = this.data.verifiedPhone;
 
-    if (!sessionInfo.is_logged_in) {
+    if (!verifiedPhone) {
       wx.hideLoading();
       this.setData({ loading: false });
       wx.showToast({
@@ -417,9 +406,6 @@ Page({
       });
       return;
     }
-
-    // 获取登录的手机号
-    const verifiedPhone = sessionInfo.phone || this.data.verifiedPhone;
 
     // 第一次上传：正面照片
     wx.uploadFile({
