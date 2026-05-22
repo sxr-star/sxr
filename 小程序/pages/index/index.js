@@ -362,32 +362,18 @@ Page({
     return isValid;
   },
 
-  // 将文件转换为base64
-  fileToBase64(filePath) {
-    return new Promise((resolve, reject) => {
-      wx.getFileSystemManager().readFile({
-        filePath: filePath,
-        encoding: 'base64',
-        success: (res) => {
-          resolve(res.data);
-        },
-        fail: (err) => {
-          reject(err);
-        }
-      });
-    });
-  },
-
   // 提交报到
-  async handleRegister() {
+  handleRegister() {
     if (this.data.loading) return;
 
     if (!this.validateForm()) return;
 
     // 前端检查是否为同一张图片
-    const imagesValid = await this.checkImagesNotSame();
-    if (!imagesValid) {
-      this.setData({ loading: false });
+    if (this.data.photoErrorFront || this.data.photoErrorBack) {
+      wx.showToast({
+        title: '请上传不同的身份证照片',
+        icon: 'none'
+      });
       return;
     }
 
@@ -396,85 +382,141 @@ Page({
       result: null
     });
 
+    wx.showLoading({
+      title: '正在提交...',
+      mask: true
+    });
+
     const { name, studentId, tempImagePathFront, tempImagePathBack } = this.data;
 
-    try {
-      // 将两张图片转换为base64
-      const frontBase64 = await this.fileToBase64(tempImagePathFront);
-      const backBase64 = await this.fileToBase64(tempImagePathBack);
+    // 存储姓名和学号到全局数据，供后续使用
+    this.tempName = name;
+    this.tempStudentId = studentId;
 
-      wx.request({
-        url: 'http://127.0.0.1:8000/api/register_with_info_v3/',
-        method: 'POST',
-        data: {
-          name: name,
-          student_id: studentId,
-          id_card_photo_front_base64: frontBase64,
-          id_card_photo_back_base64: backBase64
-        },
-        success: (res) => {
-          const data = res.data;
-          this.setData({
-            result: data
+    // 第一次上传：正面照片
+    wx.uploadFile({
+      url: 'http://127.0.0.1:8000/api/register_with_info_v3/',
+      filePath: tempImagePathFront,
+      name: 'id_card_photo_front',
+      formData: {
+        name: name,
+        student_id: studentId
+      },
+      success: (res) => {
+        console.log('正面照片上传响应', res);
+        let data;
+        try {
+          data = JSON.parse(res.data);
+        } catch (e) {
+          data = { success: false, message: '服务器响应解析失败' };
+        }
+
+        if (data.success && data.waiting_for_back) {
+          // 需要继续上传反面照片
+          wx.showToast({
+            title: '正在上传反面...',
+            icon: 'none',
+            duration: 1500
           });
 
-          if (data.success) {
-            this.setData({
-              name: '',
-              studentId: '',
-              tempImagePathFront: '',
-              tempImagePathBack: ''
-            });
+          // 第二次上传：反面照片
+          wx.uploadFile({
+            url: 'http://127.0.0.1:8000/api/register_with_info_v3/',
+            filePath: tempImagePathBack,
+            name: 'id_card_photo_back',
+            formData: {
+              name: this.tempName || name,
+              student_id: this.tempStudentId || studentId
+            },
+            success: (res2) => {
+              console.log('反面照片上传响应', res2);
+              let data2;
+              try {
+                data2 = JSON.parse(res2.data);
+              } catch (e) {
+                data2 = { success: false, message: '服务器响应解析失败' };
+              }
 
-            wx.showToast({
-              title: '报到成功',
-              icon: 'success',
-              duration: 2000
-            });
-          } else {
-            wx.showToast({
-              title: data.message,
-              icon: 'none',
-              duration: 2000
-            });
-          }
-        },
-        fail: (err) => {
-          console.error('请求失败', err);
-          this.setData({
-            result: {
-              success: false,
-              message: '网络请求失败，请确保服务器正在运行'
+              if (data2.success) {
+                // 报到成功
+                this.setData({
+                  name: '',
+                  studentId: '',
+                  tempImagePathFront: '',
+                  tempImagePathBack: '',
+                  result: data2
+                });
+                wx.showToast({
+                  title: '报到成功',
+                  icon: 'success',
+                  duration: 2000
+                });
+              } else {
+                this.setData({ result: data2 });
+                wx.showToast({
+                  title: data2.message || '提交失败',
+                  icon: 'none',
+                  duration: 3000
+                });
+              }
+            },
+            fail: (err) => {
+              console.error('反面照片上传失败', err);
+              this.setData({
+                result: { success: false, message: '反面照片上传失败' }
+              });
+              wx.showToast({
+                title: '网络请求失败',
+                icon: 'error',
+                duration: 2000
+              });
+            },
+            complete: () => {
+              wx.hideLoading();
+              this.setData({ loading: false });
             }
           });
-
+        } else if (data.success) {
+          // 报到成功（网页版直接成功）
+          this.setData({
+            name: '',
+            studentId: '',
+            tempImagePathFront: '',
+            tempImagePathBack: '',
+            result: data
+          });
           wx.showToast({
-            title: '网络请求失败',
-            icon: 'error',
+            title: '报到成功',
+            icon: 'success',
             duration: 2000
           });
-        },
-        complete: () => {
-          this.setData({
-            loading: false
+          wx.hideLoading();
+          this.setData({ loading: false });
+        } else {
+          this.setData({ result: data });
+          wx.showToast({
+            title: data.message || '提交失败',
+            icon: 'none',
+            duration: 3000
           });
+          wx.hideLoading();
+          this.setData({ loading: false });
         }
-      });
-    } catch (err) {
-      console.error('图片处理失败', err);
-      this.setData({
-        loading: false,
-        result: {
-          success: false,
-          message: '图片处理失败'
-        }
-      });
-      wx.showToast({
-        title: '图片处理失败',
-        icon: 'error',
-        duration: 2000
-      });
-    }
+      },
+      fail: (err) => {
+        console.error('正面照片上传失败', err);
+        this.setData({
+          result: { success: false, message: '网络请求失败' }
+        });
+        wx.showToast({
+          title: '网络请求失败',
+          icon: 'error',
+          duration: 2000
+        });
+        wx.hideLoading();
+        this.setData({ loading: false });
+      }
+    });
   },
 
   // 切换标签页（4.0新增）

@@ -435,7 +435,7 @@ def base64_to_image(base64_string, filename='image.jpg'):
                 filename = filename.rsplit('.', 1)[0] + '.png'
         else:
             content_type = 'image/jpeg'
-        
+
         # 创建InMemoryUploadedFile
         image_file = InMemoryUploadedFile(
             image_io,
@@ -453,91 +453,176 @@ def base64_to_image(base64_string, filename='image.jpg'):
 
 def register_with_info_v3(request):
     """
-    信息提交与身份证上传接口（3.0新增，4.0支持base64）
+    信息提交与身份证上传接口（3.0新增，4.0支持小程序分次上传）
     需要登录状态，从Session获取手机号，接收姓名、学号和身份证照片
-    支持两种上传方式：
-    1. 传统文件上传：request.FILES
-    2. Base64编码上传：request.POST或JSON中的base64字段
+
+    小程序分次上传流程：
+    1. 第一次上传：正面照片 + 姓名 + 学号
+    2. 第二次上传：反面照片 + 姓名 + 学号
+    两次请求使用相同的姓名和学号，后端通过Session临时存储第一张照片
+
+    网页版同时上传：
+    - id_card_photo_front：正面照片
+    - id_card_photo_back：反面照片
+    - name：姓名
+    - student_id：学号
     """
     # 检查登录状态
     is_logged_in = request.session.get('is_logged_in', False)
     phone = request.session.get('verified_phone', '')
-    
+
     if not is_logged_in or not phone:
         return JsonResponse({
             'success': False,
             'message': '请先登录'
         }, status=401)
-    
+
     # 获取数据（支持JSON和表单两种格式）
     try:
         data = json.loads(request.body) if request.body else {}
     except:
         data = {}
-    
+
     # 获取文本字段（优先从JSON，然后从POST）
     name = data.get('name', '').strip() or request.POST.get('name', '').strip()
     student_id = data.get('student_id', '').strip() or request.POST.get('student_id', '').strip()
-    
+
     # 校验文本字段
     if not name:
         return JsonResponse({
             'success': False,
             'message': '姓名不能为空'
         })
-    
+
     if not student_id:
         return JsonResponse({
             'success': False,
             'message': '学号不能为空'
         })
-    
-    # 获取上传的身份证照片（正反面）
-    id_card_photo_front = None
-    id_card_photo_back = None
-    
-    # 尝试从base64获取图片（小程序使用）
-    front_base64 = data.get('id_card_photo_front_base64') or request.POST.get('id_card_photo_front_base64')
-    back_base64 = data.get('id_card_photo_back_base64') or request.POST.get('id_card_photo_back_base64')
-    
-    if front_base64:
-        id_card_photo_front = base64_to_image(front_base64, 'id_card_front.jpg')
-    if back_base64:
-        id_card_photo_back = base64_to_image(back_base64, 'id_card_back.jpg')
-    
-    # 如果base64方式失败，尝试从FILES获取（网页版使用）
+
+    # 获取上传的身份证照片
+    id_card_photo_front = request.FILES.get('id_card_photo_front')
+    id_card_photo_back = request.FILES.get('id_card_photo_back')
+
+    # 如果FILES中没有，尝试从base64获取（备用）
     if not id_card_photo_front:
-        id_card_photo_front = request.FILES.get('id_card_photo_front')
+        front_base64 = data.get('id_card_photo_front_base64') or request.POST.get('id_card_photo_front_base64')
+        if front_base64:
+            id_card_photo_front = base64_to_image(front_base64, 'id_card_front.jpg')
+
     if not id_card_photo_back:
-        id_card_photo_back = request.FILES.get('id_card_photo_back')
-    
+        back_base64 = data.get('id_card_photo_back_base64') or request.POST.get('id_card_photo_back_base64')
+        if back_base64:
+            id_card_photo_back = base64_to_image(back_base64, 'id_card_back.jpg')
+
+    # 获取Session中临时存储的正面照片
+    temp_front_data = request.session.get('temp_id_card_front')
+    temp_front_name = request.session.get('temp_id_card_front_name')
+    temp_front_student_id = request.session.get('temp_id_card_front_student_id')
+
+    # 判断上传类型
+    if id_card_photo_front and id_card_photo_back:
+        # 网页版：同时上传两张照片
+        pass  # 继续处理
+    elif id_card_photo_front and not id_card_photo_back:
+        # 小程序第一次上传：只有正面照片
+        if temp_front_data:
+            # 如果已经有暂存的正面照片，检查是否是同一个人
+            if temp_front_student_id != student_id:
+                # 学号不一致，清除旧的暂存数据
+                request.session.pop('temp_id_card_front', None)
+                request.session.pop('temp_id_card_front_name', None)
+                request.session.pop('temp_id_card_front_student_id', None)
+            else:
+                # 学号一致，检查是否已经上传过反面照片
+                if request.session.get('temp_id_card_back_uploaded'):
+                    # 已经上传过反面，清理Session
+                    request.session.pop('temp_id_card_front', None)
+                    request.session.pop('temp_id_card_front_name', None)
+                    request.session.pop('temp_id_card_front_student_id', None)
+                    request.session.pop('temp_id_card_back_uploaded', None)
+                    return JsonResponse({
+                        'success': False,
+                        'message': '该学生已报到，请勿重复提交'
+                    })
+
+        # 读取正面照片的二进制数据并存储到Session
+        id_card_photo_front.seek(0)
+        front_data = id_card_photo_front.read()
+        id_card_photo_front.seek(0)
+
+        request.session['temp_id_card_front'] = base64.b64encode(front_data).decode('utf-8')
+        request.session['temp_id_card_front_name'] = name
+        request.session['temp_id_card_front_student_id'] = student_id
+
+        return JsonResponse({
+            'success': True,
+            'message': '请继续上传身份证反面照片',
+            'waiting_for_back': True
+        })
+
+    elif not id_card_photo_front and id_card_photo_back:
+        # 小程序第二次上传：只有反面照片
+        if not temp_front_data:
+            return JsonResponse({
+                'success': False,
+                'message': '请先上传身份证正面照片'
+            })
+
+        if temp_front_student_id != student_id:
+            return JsonResponse({
+                'success': False,
+                'message': '学号不一致，请重新上传正面照片'
+            })
+
+        # 从Session恢复正面照片
+        front_decoded = base64.b64decode(temp_front_data)
+        front_io = BytesIO(front_decoded)
+        id_card_photo_front = InMemoryUploadedFile(
+            front_io,
+            'id_card_photo_front',
+            'id_card_front.jpg',
+            'image/jpeg',
+            len(front_decoded),
+            None
+        )
+
+        # 标记已上传反面
+        request.session['temp_id_card_back_uploaded'] = True
+    else:
+        return JsonResponse({
+            'success': False,
+            'message': '请上传身份证照片'
+        })
+
+    # 检查是否有照片
     if not id_card_photo_front:
         return JsonResponse({
             'success': False,
             'message': '请上传身份证正面照片'
         })
-    
+
     if not id_card_photo_back:
         return JsonResponse({
             'success': False,
             'message': '请上传身份证反面照片'
         })
-    
+
     # 校验图片格式
     allowed_types = ['image/jpeg', 'image/png', 'image/jpg']
-    
+
     if hasattr(id_card_photo_front, 'content_type') and id_card_photo_front.content_type not in allowed_types:
         return JsonResponse({
             'success': False,
             'message': '身份证正面照片格式不支持，请上传 JPG 或 PNG 格式'
         })
-    
+
     if hasattr(id_card_photo_back, 'content_type') and id_card_photo_back.content_type not in allowed_types:
         return JsonResponse({
             'success': False,
             'message': '身份证反面照片格式不支持，请上传 JPG 或 PNG 格式'
         })
-    
+
     # 校验图片大小（5MB = 5 * 1024 * 1024 bytes）
     max_size = 5 * 1024 * 1024
     if id_card_photo_front.size > max_size:
@@ -545,13 +630,13 @@ def register_with_info_v3(request):
             'success': False,
             'message': '身份证正面照片大小不能超过5MB'
         })
-    
+
     if id_card_photo_back.size > max_size:
         return JsonResponse({
             'success': False,
             'message': '身份证反面照片大小不能超过5MB'
         })
-    
+
     # 校验正反面照片是否为同一张图片（先精确匹配，再相似度匹配）
     if images_are_identical(id_card_photo_front, id_card_photo_back):
         return JsonResponse({
