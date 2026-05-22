@@ -425,44 +425,25 @@ Page({
 
   // 验证表单
   async validateForm() {
-    let { name, studentId, tempImagePathFront, tempImagePathBack } = this.data;
+    let { name, studentId } = this.data;
     let isValid = true;
 
-    console.log('DEBUG validateForm - from data:', {
+    // 直接从存储中获取图片路径（不依赖data）
+    let tempImagePathFront = '';
+    let tempImagePathBack = '';
+    try {
+      tempImagePathFront = wx.getStorageSync('tempImagePathFront') || '';
+      tempImagePathBack = wx.getStorageSync('tempImagePathBack') || '';
+    } catch (e) {
+      console.log('DEBUG: getStorageSync failed', e);
+    }
+
+    console.log('DEBUG validateForm:', {
       name: !!name,
       studentId: !!studentId,
       tempImagePathFront: tempImagePathFront,
       tempImagePathBack: tempImagePathBack
     });
-
-    // 从存储中获取图片路径（作为备用）
-    let storedFront = '';
-    let storedBack = '';
-    try {
-      storedFront = wx.getStorageSync('tempImagePathFront') || '';
-      storedBack = wx.getStorageSync('tempImagePathBack') || '';
-    } catch (e) {
-      console.log('DEBUG: getStorageSync in validate failed', e);
-    }
-    
-    console.log('DEBUG validateForm - from storage:', {
-      storedFront: storedFront,
-      storedBack: storedBack
-    });
-
-    // 如果data中的路径为空但存储中有，使用存储中的值
-    if (!tempImagePathFront && storedFront) {
-      console.log('DEBUG: using stored path for front');
-      tempImagePathFront = storedFront;
-      // 同时更新data
-      this.setData({ tempImagePathFront: storedFront });
-    }
-    if (!tempImagePathBack && storedBack) {
-      console.log('DEBUG: using stored path for back');
-      tempImagePathBack = storedBack;
-      // 同时更新data
-      this.setData({ tempImagePathBack: storedBack });
-    }
 
     this.clearErrors();
 
@@ -482,7 +463,6 @@ Page({
       this.setData({ photoErrorFront: '请上传身份证正面照片' });
       isValid = false;
     } else {
-      // 检查文件是否存在
       const frontExists = await this.fileExists(tempImagePathFront);
       if (!frontExists) {
         console.log('DEBUG: tempImagePathFront file not exists');
@@ -497,7 +477,6 @@ Page({
       this.setData({ photoErrorBack: '请上传身份证反面照片' });
       isValid = false;
     } else {
-      // 检查文件是否存在
       const backExists = await this.fileExists(tempImagePathBack);
       if (!backExists) {
         console.log('DEBUG: tempImagePathBack file not exists');
@@ -547,7 +526,22 @@ Page({
       mask: true
     });
 
-    const { name, studentId, tempImagePathFront, tempImagePathBack } = this.data;
+    const { name, studentId } = this.data;
+    
+    // 从存储中获取图片路径（与验证保持一致）
+    let tempImagePathFront = '';
+    let tempImagePathBack = '';
+    try {
+      tempImagePathFront = wx.getStorageSync('tempImagePathFront') || '';
+      tempImagePathBack = wx.getStorageSync('tempImagePathBack') || '';
+    } catch (e) {
+      console.log('DEBUG: getStorageSync failed in handleRegister', e);
+    }
+    
+    console.log('DEBUG handleRegister - paths:', {
+      tempImagePathFront: tempImagePathFront,
+      tempImagePathBack: tempImagePathBack
+    });
 
     // 存储姓名和学号到全局数据，供后续使用
     this.tempName = name;
