@@ -211,11 +211,21 @@ Page({
       },
       success: (res) => {
         if (res.data.success) {
+          // 清除之前的图片数据（避免显示上一次的照片）
+          try {
+            wx.removeStorageSync('tempImagePathFront');
+            wx.removeStorageSync('tempImagePathBack');
+          } catch (e) {
+            console.log('DEBUG: removeStorageSync failed', e);
+          }
+          
           this.setData({
             isLoggedIn: true,
             phone: phone,
             verifiedPhone: phone,
-            loginResult: { success: true, message: '登录成功' }
+            loginResult: { success: true, message: '登录成功' },
+            tempImagePathFront: '',
+            tempImagePathBack: ''
           });
           wx.showToast({
             title: '登录成功',
