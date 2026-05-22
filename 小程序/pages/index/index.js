@@ -355,8 +355,19 @@ Page({
     });
   },
 
+  // 检查文件是否存在
+  fileExists(filePath) {
+    return new Promise((resolve) => {
+      wx.getFileSystemManager().access({
+        path: filePath,
+        success: () => resolve(true),
+        fail: () => resolve(false)
+      });
+    });
+  },
+
   // 验证表单
-  validateForm() {
+  async validateForm() {
     const { name, studentId, tempImagePathFront, tempImagePathBack } = this.data;
     let isValid = true;
 
@@ -379,16 +390,34 @@ Page({
       isValid = false;
     }
 
+    // 检查正面照片
     if (!tempImagePathFront) {
       console.log('DEBUG: tempImagePathFront is empty');
       this.setData({ photoErrorFront: '请上传身份证正面照片' });
       isValid = false;
+    } else {
+      // 检查文件是否存在
+      const frontExists = await this.fileExists(tempImagePathFront);
+      if (!frontExists) {
+        console.log('DEBUG: tempImagePathFront file not exists');
+        this.setData({ photoErrorFront: '正面照片文件不存在，请重新上传' });
+        isValid = false;
+      }
     }
 
+    // 检查反面照片
     if (!tempImagePathBack) {
       console.log('DEBUG: tempImagePathBack is empty');
       this.setData({ photoErrorBack: '请上传身份证反面照片' });
       isValid = false;
+    } else {
+      // 检查文件是否存在
+      const backExists = await this.fileExists(tempImagePathBack);
+      if (!backExists) {
+        console.log('DEBUG: tempImagePathBack file not exists');
+        this.setData({ photoErrorBack: '反面照片文件不存在，请重新上传' });
+        isValid = false;
+      }
     }
 
     return isValid;
@@ -398,7 +427,7 @@ Page({
   async handleRegister() {
     if (this.data.loading) return;
 
-    if (!this.validateForm()) return;
+    if (!(await this.validateForm())) return;
 
     // 前端检查是否为同一张图片
     if (this.data.photoErrorFront || this.data.photoErrorBack) {
