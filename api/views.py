@@ -468,27 +468,35 @@ def register_with_info_v3(request):
     - name：姓名
     - student_id：学号
     """
-    # 检查登录状态（支持Session、请求头和formData三种方式）
+    # 获取数据（支持JSON和表单两种格式）
+    try:
+        data = json.loads(request.body) if request.body else {}
+    except:
+        data = {}
+
+    # 检查登录状态（支持Session、JSON、formData、请求头四种方式）
     is_logged_in = request.session.get('is_logged_in', False)
     phone = request.session.get('verified_phone', '')
 
-    # 如果Session中没有登录信息，尝试从formData获取（小程序使用）
-    # 小程序wx.uploadFile不会携带Session，所以通过formData传递手机号
+    # 如果Session中没有登录信息，尝试从JSON body获取（小程序wx.request使用）
     if not is_logged_in or not phone:
-        phone_from_form = request.POST.get('verified_phone', '')
-        print(f"DEBUG: verified_phone from POST: '{phone_from_form}'")
-        phone_from_form = phone_from_form.strip()
-        print(f"DEBUG: verified_phone after strip: '{phone_from_form}'")
-        if phone_from_form:
-            # 信任前端传递的手机号（前端已通过check_login验证）
-            phone = phone_from_form
+        phone_from_json = data.get('verified_phone', '')
+        if phone_from_json:
+            phone = phone_from_json.strip()
             is_logged_in = True
 
-    # 如果还是没有，尝试从请求头获取
+    # 尝试从formData获取（小程序wx.uploadFile使用）
+    if not is_logged_in or not phone:
+        phone_from_form = request.POST.get('verified_phone', '')
+        if phone_from_form:
+            phone = phone_from_form.strip()
+            is_logged_in = True
+
+    # 尝试从请求头获取
     if not is_logged_in or not phone:
         phone_from_header = request.META.get('HTTP_X_VERIFIED_PHONE', '')
         if phone_from_header:
-            phone = phone_from_header
+            phone = phone_from_header.strip()
             is_logged_in = True
 
     if not is_logged_in or not phone:
@@ -496,12 +504,6 @@ def register_with_info_v3(request):
             'success': False,
             'message': '请先登录'
         }, status=401)
-
-    # 获取数据（支持JSON和表单两种格式）
-    try:
-        data = json.loads(request.body) if request.body else {}
-    except:
-        data = {}
 
     # 获取文本字段（优先从JSON，然后从POST）
     name = data.get('name', '').strip() or request.POST.get('name', '').strip()
