@@ -451,6 +451,7 @@ def base64_to_image(base64_string, filename='image.jpg'):
         return None
 
 
+@csrf_exempt
 def register_with_info_v3(request):
     """
     信息提交与身份证上传接口（3.0新增，4.0支持小程序分次上传）
