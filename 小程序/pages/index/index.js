@@ -345,13 +345,23 @@ Page({
       sourceType: ['album', 'camera'],
       success: (res) => {
         const filePath = res.tempFilePaths[0];
+        console.log('========================================');
         console.log('DEBUG chooseImageFront success:', filePath);
+        console.log('filePath type:', typeof filePath);
+        console.log('filePath length:', filePath ? filePath.length : 0);
+        console.log('========================================');
+        
         // 保存到本地存储
         try {
           wx.setStorageSync('tempImagePathFront', filePath);
+          console.log('DEBUG setStorageSync tempImagePathFront: SUCCESS');
+          // 验证存储是否成功
+          const stored = wx.getStorageSync('tempImagePathFront');
+          console.log('DEBUG verify storage after set:', stored);
         } catch (e) {
           console.log('DEBUG: setStorageSync failed', e);
         }
+        
         // 使用Promise确保setData完成
         new Promise((resolve) => {
           that.setData({
@@ -379,13 +389,23 @@ Page({
       sourceType: ['album', 'camera'],
       success: (res) => {
         const filePath = res.tempFilePaths[0];
+        console.log('========================================');
         console.log('DEBUG chooseImageBack success:', filePath);
+        console.log('filePath type:', typeof filePath);
+        console.log('filePath length:', filePath ? filePath.length : 0);
+        console.log('========================================');
+        
         // 保存到本地存储
         try {
           wx.setStorageSync('tempImagePathBack', filePath);
+          console.log('DEBUG setStorageSync tempImagePathBack: SUCCESS');
+          // 验证存储是否成功
+          const stored = wx.getStorageSync('tempImagePathBack');
+          console.log('DEBUG verify storage after set:', stored);
         } catch (e) {
           console.log('DEBUG: setStorageSync failed', e);
         }
+        
         // 使用Promise确保setData完成
         new Promise((resolve) => {
           that.setData({
@@ -438,6 +458,10 @@ Page({
     let { name, studentId } = this.data;
     let isValid = true;
 
+    console.log('========================================');
+    console.log('DEBUG validateForm START');
+    console.log('========================================');
+    
     // 直接从存储中获取图片路径（不依赖data）
     let tempImagePathFront = '';
     let tempImagePathBack = '';
@@ -452,8 +476,13 @@ Page({
       name: !!name,
       studentId: !!studentId,
       tempImagePathFront: tempImagePathFront,
-      tempImagePathBack: tempImagePathBack
+      tempImagePathFront_type: typeof tempImagePathFront,
+      tempImagePathFront_length: tempImagePathFront ? tempImagePathFront.length : 0,
+      tempImagePathBack: tempImagePathBack,
+      tempImagePathBack_type: typeof tempImagePathBack,
+      tempImagePathBack_length: tempImagePathBack ? tempImagePathBack.length : 0
     });
+    console.log('========================================');
 
     this.clearErrors();
 
@@ -498,22 +527,25 @@ Page({
     return isValid;
   },
 
+  // 文件转base64
+  fileToBase64(filePath) {
+    return new Promise((resolve, reject) => {
+      wx.getFileSystemManager().readFile({
+        filePath: filePath,
+        encoding: 'base64',
+        success: (res) => {
+          resolve(res.data);
+        },
+        fail: (err) => {
+          reject(err);
+        }
+      });
+    });
+  },
+
   // 提交报到
   async handleRegister() {
     if (this.data.loading) return;
-
-    // 强制检查图片路径
-    console.log('DEBUG handleRegister - before validate:', {
-      tempImagePathFront: this.data.tempImagePathFront,
-      tempImagePathBack: this.data.tempImagePathBack
-    });
-
-    // 如果路径为空但图片显示了，可能是数据绑定问题，尝试刷新
-    if (!this.data.tempImagePathFront) {
-      console.log('DEBUG: tempImagePathFront is empty, trying to refresh...');
-      // 尝试重新获取临时文件路径（如果有缓存的话）
-      // 这里可以添加更复杂的逻辑来恢复路径
-    }
 
     if (!(await this.validateForm())) return;
 
@@ -538,126 +570,57 @@ Page({
 
     const { name, studentId } = this.data;
     
-    // 从存储中获取图片路径（与验证保持一致）
+    // 从存储中获取图片路径
     let tempImagePathFront = '';
     let tempImagePathBack = '';
     try {
       tempImagePathFront = wx.getStorageSync('tempImagePathFront') || '';
       tempImagePathBack = wx.getStorageSync('tempImagePathBack') || '';
     } catch (e) {
-      console.log('DEBUG: getStorageSync failed in handleRegister', e);
+      console.log('DEBUG: getStorageSync failed', e);
     }
-    
-    console.log('DEBUG handleRegister - paths:', {
-      tempImagePathFront: tempImagePathFront,
-      tempImagePathBack: tempImagePathBack
-    });
 
-    // 存储姓名和学号到全局数据，供后续使用
-    this.tempName = name;
-    this.tempStudentId = studentId;
-
-    // 获取登录的手机号（信任本地保存的值）
     const verifiedPhone = this.data.verifiedPhone;
-
     if (!verifiedPhone) {
       wx.hideLoading();
       this.setData({ loading: false });
-      wx.showToast({
-        title: '请先登录',
-        icon: 'none',
-        duration: 2000
-      });
+      wx.showToast({ title: '请先登录', icon: 'none' });
       return;
     }
 
-    // 第一次上传：正面照片
-    wx.uploadFile({
+    // 将两张照片转为base64
+    let frontBase64 = '';
+    let backBase64 = '';
+    try {
+      frontBase64 = await this.fileToBase64(tempImagePathFront);
+      backBase64 = await this.fileToBase64(tempImagePathBack);
+    } catch (e) {
+      wx.hideLoading();
+      this.setData({ loading: false });
+      wx.showToast({ title: '照片处理失败', icon: 'none' });
+      return;
+    }
+
+    // 一次性上传两张照片（使用base64）
+    wx.request({
       url: 'http://127.0.0.1:8000/api/register_with_info_v3/',
-      filePath: tempImagePathFront,
-      name: 'id_card_photo_front',
-      formData: {
+      method: 'POST',
+      data: {
         name: name,
         student_id: studentId,
-        verified_phone: verifiedPhone
+        verified_phone: verifiedPhone,
+        id_card_photo_front_base64: frontBase64,
+        id_card_photo_back_base64: backBase64
       },
       success: (res) => {
-        console.log('正面照片上传响应', res);
-        let data;
-        try {
-          data = JSON.parse(res.data);
-        } catch (e) {
-          data = { success: false, message: '服务器响应解析失败' };
-        }
-
-        if (data.success && data.waiting_for_back) {
-          // 需要继续上传反面照片
-          wx.showToast({
-            title: '正在上传反面...',
-            icon: 'none',
-            duration: 1500
-          });
-
-          // 第二次上传：反面照片
-          wx.uploadFile({
-            url: 'http://127.0.0.1:8000/api/register_with_info_v3/',
-            filePath: tempImagePathBack,
-            name: 'id_card_photo_back',
-            formData: {
-              name: this.tempName || name,
-              student_id: this.tempStudentId || studentId,
-              verified_phone: verifiedPhone
-            },
-            success: (res2) => {
-              console.log('反面照片上传响应', res2);
-              let data2;
-              try {
-                data2 = JSON.parse(res2.data);
-              } catch (e) {
-                data2 = { success: false, message: '服务器响应解析失败' };
-              }
-
-              if (data2.success) {
-                // 报到成功
-                this.setData({
-                  name: '',
-                  studentId: '',
-                  tempImagePathFront: '',
-                  tempImagePathBack: '',
-                  result: data2
-                });
-                wx.showToast({
-                  title: '报到成功',
-                  icon: 'success',
-                  duration: 2000
-                });
-              } else {
-                this.setData({ result: data2 });
-                wx.showToast({
-                  title: data2.message || '提交失败',
-                  icon: 'none',
-                  duration: 3000
-                });
-              }
-            },
-            fail: (err) => {
-              console.error('反面照片上传失败', err);
-              this.setData({
-                result: { success: false, message: '反面照片上传失败' }
-              });
-              wx.showToast({
-                title: '网络请求失败',
-                icon: 'error',
-                duration: 2000
-              });
-            },
-            complete: () => {
-              wx.hideLoading();
-              this.setData({ loading: false });
-            }
-          });
-        } else if (data.success) {
-          // 报到成功（网页版直接成功）
+        wx.hideLoading();
+        const data = res.data || { success: false, message: '服务器响应失败' };
+        if (data.success) {
+          // 报到成功，清除存储的图片路径
+          try {
+            wx.removeStorageSync('tempImagePathFront');
+            wx.removeStorageSync('tempImagePathBack');
+          } catch (e) {}
           this.setData({
             name: '',
             studentId: '',
@@ -665,36 +628,18 @@ Page({
             tempImagePathBack: '',
             result: data
           });
-          wx.showToast({
-            title: '报到成功',
-            icon: 'success',
-            duration: 2000
-          });
-          wx.hideLoading();
-          this.setData({ loading: false });
+          wx.showToast({ title: '报到成功', icon: 'success' });
         } else {
           this.setData({ result: data });
-          wx.showToast({
-            title: data.message || '提交失败',
-            icon: 'none',
-            duration: 3000
-          });
-          wx.hideLoading();
-          this.setData({ loading: false });
+          wx.showToast({ title: data.message || '提交失败', icon: 'none', duration: 3000 });
         }
+        this.setData({ loading: false });
       },
       fail: (err) => {
-        console.error('正面照片上传失败', err);
-        this.setData({
-          result: { success: false, message: '网络请求失败' }
-        });
-        wx.showToast({
-          title: '网络请求失败',
-          icon: 'error',
-          duration: 2000
-        });
+        console.error('上传失败', err);
         wx.hideLoading();
         this.setData({ loading: false });
+        wx.showToast({ title: '网络请求失败', icon: 'none' });
       }
     });
   },

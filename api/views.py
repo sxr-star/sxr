@@ -535,10 +535,11 @@ def register_with_info_v3(request):
         if back_base64:
             id_card_photo_back = base64_to_image(back_base64, 'id_card_back.jpg')
 
-    # 获取Session中临时存储的正面照片
-    temp_front_data = request.session.get('temp_id_card_front')
-    temp_front_name = request.session.get('temp_id_card_front_name')
-    temp_front_student_id = request.session.get('temp_id_card_front_student_id')
+    # 获取Session中临时存储的正面照片（使用手机号作为key，支持小程序无Session上传）
+    session_key = f'temp_front_{phone}'
+    temp_front_data = request.session.get(session_key)
+    temp_front_name = request.session.get(f'{session_key}_name')
+    temp_front_student_id = request.session.get(f'{session_key}_student_id')
 
     # 判断上传类型
     if id_card_photo_front and id_card_photo_back:
@@ -550,30 +551,31 @@ def register_with_info_v3(request):
             # 如果已经有暂存的正面照片，检查是否是同一个人
             if temp_front_student_id != student_id:
                 # 学号不一致，清除旧的暂存数据
-                request.session.pop('temp_id_card_front', None)
-                request.session.pop('temp_id_card_front_name', None)
-                request.session.pop('temp_id_card_front_student_id', None)
+                request.session.pop(session_key, None)
+                request.session.pop(f'{session_key}_name', None)
+                request.session.pop(f'{session_key}_student_id', None)
             else:
                 # 学号一致，检查是否已经上传过反面照片
-                if request.session.get('temp_id_card_back_uploaded'):
+                if request.session.get(f'{session_key}_back_uploaded'):
                     # 已经上传过反面，清理Session
-                    request.session.pop('temp_id_card_front', None)
-                    request.session.pop('temp_id_card_front_name', None)
-                    request.session.pop('temp_id_card_front_student_id', None)
-                    request.session.pop('temp_id_card_back_uploaded', None)
+                    request.session.pop(session_key, None)
+                    request.session.pop(f'{session_key}_name', None)
+                    request.session.pop(f'{session_key}_student_id', None)
+                    request.session.pop(f'{session_key}_back_uploaded', None)
                     return JsonResponse({
                         'success': False,
                         'message': '该学生已报到，请勿重复提交'
                     })
 
-        # 读取正面照片的二进制数据并存储到Session
+        # 读取正面照片的二进制数据并存储到Session（使用手机号作为key）
         id_card_photo_front.seek(0)
         front_data = id_card_photo_front.read()
         id_card_photo_front.seek(0)
 
-        request.session['temp_id_card_front'] = base64.b64encode(front_data).decode('utf-8')
-        request.session['temp_id_card_front_name'] = name
-        request.session['temp_id_card_front_student_id'] = student_id
+        session_key = f'temp_front_{phone}'
+        request.session[session_key] = base64.b64encode(front_data).decode('utf-8')
+        request.session[f'{session_key}_name'] = name
+        request.session[f'{session_key}_student_id'] = student_id
 
         response = JsonResponse({
             'success': True,
