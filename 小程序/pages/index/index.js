@@ -41,17 +41,48 @@ Page({
   },
 
   onShow() {
-    // 页面显示时检查图片路径是否有效
+    // 页面显示时从本地存储恢复图片路径
     const { tempImagePathFront, tempImagePathBack } = this.data;
     console.log('DEBUG onShow - tempImagePathFront:', tempImagePathFront);
     console.log('DEBUG onShow - tempImagePathBack:', tempImagePathBack);
     
-    // 如果图片路径存在但验证仍然失败，尝试重新设置
-    if (tempImagePathFront) {
-      this.setData({ photoErrorFront: '' });
+    // 从本地存储恢复图片路径
+    let needUpdate = false;
+    let newFront = tempImagePathFront;
+    let newBack = tempImagePathBack;
+    
+    try {
+      const storedFront = wx.getStorageSync('tempImagePathFront');
+      if (storedFront && !tempImagePathFront) {
+        console.log('DEBUG: restoring tempImagePathFront from storage:', storedFront);
+        newFront = storedFront;
+        needUpdate = true;
+      }
+      const storedBack = wx.getStorageSync('tempImagePathBack');
+      if (storedBack && !tempImagePathBack) {
+        console.log('DEBUG: restoring tempImagePathBack from storage:', storedBack);
+        newBack = storedBack;
+        needUpdate = true;
+      }
+    } catch (e) {
+      console.log('DEBUG: getStorageSync failed', e);
     }
-    if (tempImagePathBack) {
-      this.setData({ photoErrorBack: '' });
+    
+    if (needUpdate) {
+      this.setData({
+        tempImagePathFront: newFront,
+        tempImagePathBack: newBack,
+        photoErrorFront: '',
+        photoErrorBack: ''
+      });
+    } else {
+      // 如果图片路径存在但验证仍然失败，尝试重新设置
+      if (tempImagePathFront) {
+        this.setData({ photoErrorFront: '' });
+      }
+      if (tempImagePathBack) {
+        this.setData({ photoErrorBack: '' });
+      }
     }
   },
 
@@ -297,22 +328,31 @@ Page({
 
   // 选择正面图片
   chooseImageFront() {
+    const that = this;
     wx.chooseImage({
       count: 1,
       sizeType: ['original', 'compressed'],
       sourceType: ['album', 'camera'],
       success: (res) => {
-        console.log('DEBUG chooseImageFront success:', res.tempFilePaths[0]);
-        this.setData({
-          tempImagePathFront: res.tempFilePaths[0],
-          photoErrorFront: ''
+        const filePath = res.tempFilePaths[0];
+        console.log('DEBUG chooseImageFront success:', filePath);
+        // 保存到本地存储
+        try {
+          wx.setStorageSync('tempImagePathFront', filePath);
+        } catch (e) {
+          console.log('DEBUG: setStorageSync failed', e);
+        }
+        // 使用Promise确保setData完成
+        new Promise((resolve) => {
+          that.setData({
+            tempImagePathFront: filePath,
+            photoErrorFront: ''
+          }, resolve);
+        }).then(() => {
+          console.log('DEBUG after setData - tempImagePathFront:', that.data.tempImagePathFront);
+          // 检查是否为同一张图片
+          that.checkImagesNotSame();
         });
-        // 检查是否为同一张图片
-        this.checkImagesNotSame();
-        // 验证后立即检查数据
-        setTimeout(() => {
-          console.log('DEBUG after setData - tempImagePathFront:', this.data.tempImagePathFront);
-        }, 100);
       },
       fail: (err) => {
         console.log('DEBUG chooseImageFront fail:', err);
@@ -322,17 +362,34 @@ Page({
 
   // 选择反面图片
   chooseImageBack() {
+    const that = this;
     wx.chooseImage({
       count: 1,
       sizeType: ['original', 'compressed'],
       sourceType: ['album', 'camera'],
       success: (res) => {
-        this.setData({
-          tempImagePathBack: res.tempFilePaths[0],
-          photoErrorBack: ''
+        const filePath = res.tempFilePaths[0];
+        console.log('DEBUG chooseImageBack success:', filePath);
+        // 保存到本地存储
+        try {
+          wx.setStorageSync('tempImagePathBack', filePath);
+        } catch (e) {
+          console.log('DEBUG: setStorageSync failed', e);
+        }
+        // 使用Promise确保setData完成
+        new Promise((resolve) => {
+          that.setData({
+            tempImagePathBack: filePath,
+            photoErrorBack: ''
+          }, resolve);
+        }).then(() => {
+          console.log('DEBUG after setData - tempImagePathBack:', that.data.tempImagePathBack);
+          // 检查是否为同一张图片
+          that.checkImagesNotSame();
         });
-        // 检查是否为同一张图片
-        this.checkImagesNotSame();
+      },
+      fail: (err) => {
+        console.log('DEBUG chooseImageBack fail:', err);
       }
     });
   },
@@ -426,6 +483,19 @@ Page({
   // 提交报到
   async handleRegister() {
     if (this.data.loading) return;
+
+    // 强制检查图片路径
+    console.log('DEBUG handleRegister - before validate:', {
+      tempImagePathFront: this.data.tempImagePathFront,
+      tempImagePathBack: this.data.tempImagePathBack
+    });
+
+    // 如果路径为空但图片显示了，可能是数据绑定问题，尝试刷新
+    if (!this.data.tempImagePathFront) {
+      console.log('DEBUG: tempImagePathFront is empty, trying to refresh...');
+      // 尝试重新获取临时文件路径（如果有缓存的话）
+      // 这里可以添加更复杂的逻辑来恢复路径
+    }
 
     if (!(await this.validateForm())) return;
 
