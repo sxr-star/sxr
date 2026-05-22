@@ -426,13 +426,10 @@ Page({
       url: 'http://127.0.0.1:8000/api/register_with_info_v3/',
       filePath: tempImagePathFront,
       name: 'id_card_photo_front',
-      header: {
-        'content-type': 'multipart/form-data',
-        'X-Verified-Phone': verifiedPhone
-      },
       formData: {
         name: name,
-        student_id: studentId
+        student_id: studentId,
+        verified_phone: verifiedPhone
       },
       success: (res) => {
         console.log('正面照片上传响应', res);
@@ -456,13 +453,10 @@ Page({
             url: 'http://127.0.0.1:8000/api/register_with_info_v3/',
             filePath: tempImagePathBack,
             name: 'id_card_photo_back',
-            header: {
-              'content-type': 'multipart/form-data',
-              'X-Verified-Phone': verifiedPhone
-            },
             formData: {
               name: this.tempName || name,
-              student_id: this.tempStudentId || studentId
+              student_id: this.tempStudentId || studentId,
+              verified_phone: verifiedPhone
             },
             success: (res2) => {
               console.log('反面照片上传响应', res2);
